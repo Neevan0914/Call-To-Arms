@@ -92,7 +92,8 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0.05em 0.4em; margin: 0 
 @keyframes dmgfade { from { opacity: 1; } to { opacity: 0; } }
 #lowHealth { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(120, 0, 0, 0.55) 100%); transition: opacity 0.4s; }
 
-#controlsHint { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); padding: 6px 12px; display: flex; gap: 14px; font: 500 11px 'Inter'; color: var(--dim); opacity: 0; transition: opacity 1s; }
+#controlsHint span { white-space: nowrap; }
+#controlsHint { position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%); padding: 6px 12px; display: flex; gap: 14px; font: 500 11px 'Inter'; color: var(--dim); opacity: 0; transition: opacity 1s; }
 #hud.tutorial #controlsHint { opacity: 1; }
 
 /* ---------- Cinematic ---------- */

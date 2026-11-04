@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { WorldPass } from './worldpass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
@@ -10,7 +10,7 @@ const GradeShader = {
   uniforms: {
     tDiffuse: { value: null }, uTime: { value: 0 }, uAspect: { value: 1 }, uRes: { value: new THREE.Vector2(1, 1) },
     uBlur: { value: 0 }, uEyelid: { value: 0 }, uDamage: { value: 0 }, uDesat: { value: 0 }, uFade: { value: 0 },
-    uVignette: { value: 0.55 }, uGrain: { value: 0.035 }, uChroma: { value: 0.0015 }, uRedTint: { value: 0 },
+    uVignette: { value: 0.55 }, uGrain: { value: 0.035 }, uChroma: { value: 0.0007 }, uRedTint: { value: 0 },
   },
   vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
   fragmentShader: `
@@ -72,10 +72,10 @@ export class Post {
     this.renderer = renderer;
     const size = renderer.getSize(new THREE.Vector2());
     const pr = renderer.getPixelRatio();
-    const rt = new THREE.WebGLRenderTarget(size.x * pr, size.y * pr, { type: THREE.HalfFloatType, samples: quality === 'low' ? 0 : 4 });
+    const rt = new THREE.WebGLRenderTarget(size.x * pr, size.y * pr, { type: THREE.HalfFloatType });
     this.composer = new EffectComposer(renderer, rt);
-    this.renderPass = new RenderPass(scene, camera);
-    this.composer.addPass(this.renderPass);
+    this.world = new WorldPass(scene, camera, { samples: quality === 'low' ? 0 : 4, ao: quality !== 'low', rays: quality !== 'low' });
+    this.composer.addPass(this.world);
     this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x / 2, size.y / 2), 0.2, 0.5, 0.95);
     this.bloom.enabled = quality !== 'low';
     this.composer.addPass(this.bloom);
@@ -84,6 +84,11 @@ export class Post {
     this.composer.addPass(this.grade);
     this.u = this.grade.uniforms;
     this.setSize(size.x, size.y);
+  }
+
+  setQuality(q) {
+    this.bloom.enabled = q !== 'low';
+    this.world.setFeatures({ ao: q !== 'low', rays: q !== 'low' });
   }
 
   setSize(w, h) {

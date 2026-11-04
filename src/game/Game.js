@@ -3,7 +3,7 @@ import { generateTextures } from '../world/textures.js';
 import { Terrain } from '../world/terrain.js';
 import { CollisionWorld } from '../world/physics.js';
 import { Atmosphere } from '../world/sky.js';
-import { Vegetation, Grass } from '../world/vegetation.js';
+import { Vegetation, Grass, SUN_UNIFORMS } from '../world/vegetation.js';
 import { Fort } from '../world/fort.js';
 import { Effects } from '../world/effects.js';
 import { Post } from '../core/post.js';
@@ -84,7 +84,8 @@ export class Game {
     this.physics = new CollisionWorld(this.terrain);
 
     progress(0.35, 'Lighting the morning…'); await nextFrame();
-    this.atmo = new Atmosphere(this.scene, renderer, Q.shadow);
+    this.atmo = new Atmosphere(this.scene, renderer, Q.shadow, this.camera);
+    SUN_UNIFORMS.uSunDir.value.copy(this.atmo.sunDir);
 
     progress(0.45, 'Growing the Thornwood…'); await nextFrame();
     this.vegetation = new Vegetation(this.scene, this.terrain, this.physics, this.T, this.settings.quality);
@@ -102,6 +103,7 @@ export class Game {
     this.audio.voice = this.settings.voice;
     this.rig = new CameraRig(this.camera, this);
     this.post = new Post(renderer, this.scene, this.camera, this.settings.quality);
+    this.post.world.sunDir.copy(this.atmo.sunDir);
     this.hud = new HUD(this);
     this.player = new Player(this);
     this.actors.push(this.player);
@@ -109,6 +111,7 @@ export class Game {
     this.story.prepareWorld();
 
     progress(0.86, 'Compiling shaders…'); await nextFrame();
+    this.atmo.setupScene(this.scene);
     this.rig.update(0.016, 0.016);
     try { renderer.compile(this.scene, this.camera); } catch (e) { /* */ }
     this.post.render(0.016);
@@ -130,7 +133,7 @@ export class Game {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.pr));
     this.atmo.setShadowQuality(Q.shadow);
     this.grass.setCount(Q.grass);
-    this.post.bloom.enabled = q !== 'low';
+    this.post.setQuality(q);
     this.onResize();
     this.saveSettings();
   }
@@ -161,6 +164,7 @@ export class Game {
   // ---------- actors ----------
   spawnSoldier(opts) {
     const s = new Soldier(this, opts);
+    this.atmo.setupScene(s.h.root);
     this.actors.push(s);
     this.soldiers.push(s);
     return s;

@@ -24,10 +24,10 @@ function prep(g) {
 function merge(list) { return mergeGeometries(list.map(prep), false); }
 
 // ------- tree geometry builders -------
-function pineGeometry(seed) {
+function pineGeometry(seed, lod = 0) {
   const rnd = mulberry32(seed);
   const noise = new Simplex2(seed);
-  const trunk = new THREE.CylinderGeometry(0.16, 0.34, 12, 8, 6, true);
+  const trunk = new THREE.CylinderGeometry(0.16, 0.34, 12, lod ? 5 : 8, lod ? 2 : 6, true);
   trunk.translate(0, 6, 0);
   // root flare
   const tp = trunk.attributes.position;
@@ -39,14 +39,14 @@ function pineGeometry(seed) {
   trunk.computeVertexNormals();
 
   const parts = [];
-  const layers = 9;
+  const layers = lod ? 6 : 9;
   for (let l = 0; l < layers; l++) {
     const t = l / (layers - 1);
     const r = 3.2 * Math.pow(1 - t, 1.1) + 0.55;
     const h = 2.7 - t * 0.9;
     const y = 3.2 + t * 10.2;
-    const radial = 22;
-    const cone = new THREE.ConeGeometry(r, h, radial, 5, true);
+    const radial = lod ? 10 : 22;
+    const cone = new THREE.ConeGeometry(r, h, radial, lod ? 2 : 5, true);
     const p = cone.attributes.position;
     const col = new Float32Array(p.count * 3);
     const twist = rnd() * 6.28;
@@ -79,7 +79,7 @@ function pineGeometry(seed) {
   return { trunk: prep(colorize(trunk, 0xffffff)), foliage: merge(parts), height: 14, trunkR: 0.34 };
 }
 
-function broadleafGeometry(seed) {
+function broadleafGeometry(seed, lod = 0) {
   const rnd = mulberry32(seed);
   const noise = new Simplex2(seed + 3);
   const tparts = [];
@@ -101,7 +101,7 @@ function broadleafGeometry(seed) {
   const blobs = 9;
   for (let i = 0; i < blobs; i++) {
     const r = 1.7 + rnd() * 1.4;
-    let s = new THREE.IcosahedronGeometry(r, 2);
+    let s = new THREE.IcosahedronGeometry(r, lod ? 1 : 2);
     s.deleteAttribute('uv'); s.deleteAttribute('normal'); s = mergeVertices(s);
     const p = s.attributes.position;
     const a = rnd() * Math.PI * 2, d = i === 0 ? 0 : 1.5 + rnd() * 1.8;
@@ -205,12 +205,92 @@ function rockGeometry(seed) {
   return g;
 }
 
-// Adds wind sway to an instanced foliage material.
-function windify(mat, uniforms, strength = 0.12, heightRef = 12) {
+function twigGeometry(seed) {
+  const rnd = mulberry32(seed);
+  const parts = [];
+  const main = new THREE.CylinderGeometry(0.018, 0.035, 1, 5, 1);
+  main.rotateZ(Math.PI / 2);
+  parts.push(main);
+  for (let i = 0; i < 3; i++) {
+    const b = new THREE.CylinderGeometry(0.008, 0.016, 0.3 + rnd() * 0.25, 4, 1);
+    b.translate(0, 0.15, 0);
+    b.rotateZ(Math.PI / 2 - 0.6 - rnd() * 0.4);
+    b.rotateY((rnd() - 0.5) * 1.2);
+    b.translate(-0.35 + i * 0.3, 0, 0);
+    parts.push(b);
+  }
+  return merge(parts.map((g) => colorize(g, 0xffffff)));
+}
+
+function mushroomGeometry(seed) {
+  const rnd = mulberry32(seed);
+  const parts = [];
+  for (let i = 0; i < 3; i++) {
+    const h = 0.05 + rnd() * 0.07, r = 0.03 + rnd() * 0.035;
+    const ox = (rnd() - 0.5) * 0.18, oz = (rnd() - 0.5) * 0.18;
+    const stem = new THREE.CylinderGeometry(r * 0.28, r * 0.35, h, 6);
+    stem.translate(ox, h / 2, oz);
+    parts.push(colorize(stem, 0xd9cdb0));
+    const cap = new THREE.SphereGeometry(r, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2);
+    cap.scale(1, 0.6, 1);
+    cap.translate(ox, h, oz);
+    parts.push(colorize(cap, i === 0 ? 0x8a3a1c : 0xa0682e));
+  }
+  return merge(parts);
+}
+
+function flowerGeometry(seed) {
+  const rnd = mulberry32(seed);
+  const parts = [];
+  for (let i = 0; i < 4; i++) {
+    const h = 0.16 + rnd() * 0.2;
+    const ox = (rnd() - 0.5) * 0.25, oz = (rnd() - 0.5) * 0.25;
+    const stem = new THREE.CylinderGeometry(0.004, 0.006, h, 3);
+    stem.translate(ox, h / 2, oz);
+    parts.push(colorize(stem, 0x3a6a24));
+    const petals = new THREE.CircleGeometry(0.032 + rnd() * 0.02, 6);
+    petals.rotateX(-Math.PI / 2 + (rnd() - 0.5) * 0.6);
+    petals.translate(ox, h, oz);
+    parts.push(colorize(petals, 0xffffff));
+    const eye = new THREE.CircleGeometry(0.01, 5);
+    eye.rotateX(-Math.PI / 2);
+    eye.translate(ox, h + 0.003, oz);
+    parts.push(colorize(eye, 0xe0b030));
+  }
+  return merge(parts);
+}
+
+function pebbleGeometry() {
+  let g = new THREE.IcosahedronGeometry(1, 1);
+  g.deleteAttribute('uv'); g.deleteAttribute('normal'); g = mergeVertices(g);
+  const p = g.attributes.position;
+  const uv = new Float32Array(p.count * 2);
+  const n = new Simplex2(9);
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+    const k = 1 + n.noise(x * 2 + y, z * 2) * 0.25;
+    p.setXYZ(i, x * k, y * k * 0.55, z * k);
+    uv[i * 2] = x * 0.3; uv[i * 2 + 1] = z * 0.3;
+  }
+  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  g.computeVertexNormals();
+  return g;
+}
+
+// Shared sun uniforms for subsurface-style translucency (leaves glow when backlit).
+export const SUN_UNIFORMS = {
+  uSunDir: { value: new THREE.Vector3(0, 1, 0) },
+  uSunCol: { value: new THREE.Color(1.0, 0.82, 0.55).multiplyScalar(2.2) },
+};
+
+// Adds wind sway + backlit translucency to an (instanced) foliage material.
+function windify(mat, uniforms, strength = 0.12, heightRef = 12, transl = 0.5) {
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uTime = uniforms.uTime;
+    sh.uniforms.uSunDir = SUN_UNIFORMS.uSunDir;
+    sh.uniforms.uSunCol = SUN_UNIFORMS.uSunCol;
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nuniform float uTime;')
+      .replace('#include <common>', '#include <common>\nuniform float uTime;\nvarying vec3 vWPosT;')
       .replace('#include <begin_vertex>', `#include <begin_vertex>
         #ifdef USE_INSTANCING
           vec2 ip = vec2(instanceMatrix[3][0], instanceMatrix[3][2]);
@@ -221,8 +301,24 @@ function windify(mat, uniforms, strength = 0.12, heightRef = 12) {
         float sw = sin(uTime * 1.1 + ip.x * 0.07 + ip.y * 0.05) * 0.6 + sin(uTime * 2.3 + ip.x * 0.31 + transformed.y * 0.4) * 0.25;
         transformed.x += sw * ${strength.toFixed(3)} * hh * hh * ${heightRef.toFixed(1)};
         transformed.z += cos(uTime * 1.3 + ip.y * 0.06) * ${(strength * 0.5).toFixed(3)} * hh * hh * ${heightRef.toFixed(1)};
+      `)
+      .replace('#include <project_vertex>', `#include <project_vertex>
+        vec4 twp = vec4(transformed, 1.0);
+        #ifdef USE_INSTANCING
+          twp = instanceMatrix * twp;
+        #endif
+        vWPosT = (modelMatrix * twp).xyz;
+      `);
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform vec3 uSunDir;\nuniform vec3 uSunCol;\nvarying vec3 vWPosT;')
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+        vec3 tViewDir = normalize(vWPosT - cameraPosition);
+        float tBack = pow(max(dot(tViewDir, uSunDir), 0.0), 5.0);
+        totalEmissiveRadiance += diffuseColor.rgb * uSunCol * (tBack * ${transl.toFixed(2)} + 0.04);
       `);
   };
+  const key = `wind|${strength}|${heightRef}|${transl}`;
+  mat.customProgramCacheKey = () => key;
 }
 
 export class Vegetation {
@@ -239,13 +335,20 @@ export class Vegetation {
     const leafMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 });
     const bushMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 });
     const fernMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, side: THREE.DoubleSide });
-    windify(pineMat, this.uniforms, 0.012, 14);
-    windify(leafMat, this.uniforms, 0.016, 11);
-    windify(fernMat, this.uniforms, 0.06, 0.8);
+    windify(pineMat, this.uniforms, 0.012, 14, 0.45);
+    windify(leafMat, this.uniforms, 0.016, 11, 0.6);
+    windify(fernMat, this.uniforms, 0.06, 0.8, 0.7);
+    windify(bushMat, this.uniforms, 0.03, 1.5, 0.5);
     const rockMat = new THREE.MeshStandardMaterial({ map: T.rock, normalMap: T.rockN, roughness: 0.92, color: 0xc8c4bc });
 
     const pine = pineGeometry(11);
     const oak = broadleafGeometry(21);
+    const pineFar = pineGeometry(11, 1);
+    const oakFar = broadleafGeometry(21, 1);
+    const twig = twigGeometry(61), mush = mushroomGeometry(71), flower = flowerGeometry(81), pebble = pebbleGeometry();
+    const plainMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75 });
+    const flowerMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7, side: THREE.DoubleSide });
+    windify(flowerMat, this.uniforms, 0.08, 0.4, 0.6);
     const bush = bushGeometry(31);
     const fern = fernGeometry(41);
     const rock = rockGeometry(51);
@@ -261,7 +364,7 @@ export class Vegetation {
       const tx = Math.floor((x + WORLD_SIZE / 2) / TILE), tz = Math.floor((z + WORLD_SIZE / 2) / TILE);
       const k = tx * 100 + tz;
       let b = buckets.get(k);
-      if (!b) { b = { tx, tz, pine: [], oak: [], bush: [], fern: [], rock: [], log: [], stump: [] }; buckets.set(k, b); }
+      if (!b) { b = { tx, tz, pine: [], oak: [], bush: [], fern: [], rock: [], log: [], stump: [], twig: [], mush: [], flower: [], pebble: [] }; buckets.set(k, b); }
       return b;
     };
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), e = new THREE.Euler();
@@ -278,7 +381,7 @@ export class Vegetation {
     for (let gx = -half; gx < half; gx += step) {
       for (let gz = -half; gz < half; gz += step) {
         const corridor = inCorridor(gx, gz);
-        if (!corridor && rnd() > 0.55) continue;
+        if (!corridor && rnd() > (quality === 'high' ? 0.8 : 0.55)) continue;
         const x = gx + rnd() * step, z = gz + rnd() * step;
         const pq = terrain.pathQuery(x, z);
         const f = terrain.forestDensity(x, z, pq.d);
@@ -303,6 +406,26 @@ export class Vegetation {
             b.fern.push({ m: mat(fx, terrain.getHeight(fx, fz) - 0.05, fz, rnd() * 6.28, 0.7 + rnd() * 0.8), c: 0.75 + rnd() * 0.5 });
           }
         }
+        // ground clutter (near the playable corridor only)
+        if (corridor && pq.d > 2.2 && terrain.fortDist(x, z) > FORT.half + 2) {
+          const put = (list, n, sc0, sc1, yo = 0, tilt = 0) => {
+            for (let k = 0; k < n; k++) {
+              const cx = x + (rnd() - 0.5) * step, cz = z + (rnd() - 0.5) * step;
+              const sc = sc0 + rnd() * (sc1 - sc0);
+              list.push({ m: mat(cx, terrain.getHeight(cx, cz) + yo * sc, cz, rnd() * 6.28, sc, sc, sc, (rnd() - 0.5) * tilt, (rnd() - 0.5) * tilt), c: 0.8 + rnd() * 0.4 });
+            }
+          };
+          put(b.pebble, Math.floor(rnd() * 4 * density), 0.05, 0.22, 0.1, 0.5);
+          if (f > 0.3 && rnd() < 0.45 * density) put(b.twig, 1, 0.6, 1.5, 0.03, 0.15);
+          if (f > 0.45 && rnd() < 0.18) put(b.mush, 1, 0.8, 1.4);
+          if (f < 0.35 && rnd() < 0.6 * density) {
+            const n = 2 + Math.floor(rnd() * 5);
+            const pal = [[0.95, 0.93, 0.85], [1.0, 0.8, 0.25], [0.7, 0.45, 0.9], [0.95, 0.45, 0.4]][Math.floor(rnd() * 4)];
+            const start = b.flower.length;
+            put(b.flower, n, 0.8, 1.4);
+            for (let k = start; k < b.flower.length; k++) b.flower[k].col = pal;
+          }
+        }
         if (rnd() < 0.035 && pq.d > 4 && terrain.fortDist(x, z) > FORT.half + 4 && Math.hypot(x, z) > 8) {
           const sc = 0.35 + rnd() * rnd() * 2.4;
           b.rock.push({ m: mat(x, y - sc * 0.15, z, rnd() * 6.28, sc, sc * (0.8 + rnd() * 0.6), sc * (0.8 + rnd() * 0.5)), c: 0.85 + rnd() * 0.3 });
@@ -323,7 +446,11 @@ export class Vegetation {
       if (!list.length) return null;
       const im = new THREE.InstancedMesh(geo, material, list.length);
       const col = new THREE.Color();
-      list.forEach((it, i) => { im.setMatrixAt(i, it.m); col.setScalar(it.c); im.setColorAt(i, col); });
+      list.forEach((it, i) => {
+        im.setMatrixAt(i, it.m);
+        if (it.col) col.setRGB(it.col[0] * it.c, it.col[1] * it.c, it.col[2] * it.c); else col.setScalar(it.c);
+        im.setColorAt(i, col);
+      });
       im.instanceMatrix.needsUpdate = true;
       if (im.instanceColor) im.instanceColor.needsUpdate = true;
       im.castShadow = cast; im.receiveShadow = recv;
@@ -333,20 +460,31 @@ export class Vegetation {
 
     for (const b of buckets.values()) {
       const group = new THREE.Group();
-      const meshes = [
+      const near = [
         make(pine.trunk, barkMat, b.pine, true), make(pine.foliage, pineMat, b.pine, true),
         make(oak.trunk, barkMat, b.oak, true), make(oak.foliage, leafMat, b.oak, true),
-        make(bush, bushMat, b.bush, true), make(fern, fernMat, b.fern, false),
-        make(rock, rockMat, b.rock, true), make(logGeo, barkMat, b.log, true), make(stumpGeo, barkMat, b.stump, true),
       ].filter(Boolean);
-      meshes.forEach((m) => group.add(m));
+      const far = [
+        make(pineFar.trunk, barkMat, b.pine, true), make(pineFar.foliage, pineMat, b.pine, true),
+        make(oakFar.trunk, barkMat, b.oak, true), make(oakFar.foliage, leafMat, b.oak, true),
+      ].filter(Boolean);
+      const mid = [
+        make(bush, bushMat, b.bush, true), make(rock, rockMat, b.rock, true),
+        make(logGeo, barkMat, b.log, true), make(stumpGeo, barkMat, b.stump, true),
+      ].filter(Boolean);
+      const detail = [
+        make(fern, fernMat, b.fern, false), make(twig, barkMat, b.twig, true), make(mush, plainMat, b.mush, false),
+        make(flower, flowerMat, b.flower, false), make(pebble, rockMat, b.pebble, false),
+      ].filter(Boolean);
+      [...near, ...far, ...mid, ...detail].forEach((m) => group.add(m));
+      far.forEach((m) => { m.visible = false; });
       const cx = -WORLD_SIZE / 2 + (b.tx + 0.5) * TILE, cz = -WORLD_SIZE / 2 + (b.tz + 0.5) * TILE;
-      group.userData.center = new THREE.Vector3(cx, terrain.getHeight(cx, cz), cz);
-      // small detail (ferns) gets culled earlier
-      group.userData.ferns = meshes.find((m) => m.material === fernMat) || null;
+      group.userData = { center: new THREE.Vector3(cx, terrain.getHeight(cx, cz), cz), near, far, mid, detail, lod: -1 };
       scene.add(group);
       this.tiles.push(group);
     }
+    this.lodNear = quality === 'low' ? 110 : 160;
+    this.drawDist = quality === 'low' ? 330 : 470;
 
     this._addLightShafts(T);
   }
@@ -380,9 +518,19 @@ export class Vegetation {
     this.uniforms.uTime.value += dt;
     const cp = camera.position;
     for (const t of this.tiles) {
-      const d = Math.hypot(t.userData.center.x - cp.x, t.userData.center.z - cp.z);
-      t.visible = d < 360;
-      if (t.userData.ferns) t.userData.ferns.visible = d < 150;
+      const u = t.userData;
+      // distance to the tile's footprint (not its center) so nearby tiles never pop
+      const dx = Math.max(0, Math.abs(u.center.x - cp.x) - TILE / 2), dz = Math.max(0, Math.abs(u.center.z - cp.z) - TILE / 2);
+      const d = Math.hypot(dx, dz);
+      t.visible = d < this.drawDist;
+      const lod = d < this.lodNear ? 0 : 1;
+      if (lod !== u.lod) {
+        u.lod = lod;
+        u.near.forEach((m) => { m.visible = lod === 0; });
+        u.far.forEach((m) => { m.visible = lod === 1; });
+      }
+      u.mid.forEach((m) => { m.visible = d < 220; });
+      u.detail.forEach((m) => { m.visible = d < 90; });
     }
     for (const s of this.shafts) {
       // billboard around the shaft's own axis
@@ -434,7 +582,7 @@ export class Grass {
     };
     const mat = new THREE.MeshLambertMaterial({ side: THREE.DoubleSide, color: 0xffffff });
     mat.onBeforeCompile = (sh) => {
-      Object.assign(sh.uniforms, this.uniforms);
+      Object.assign(sh.uniforms, this.uniforms, SUN_UNIFORMS);
       sh.vertexShader = sh.vertexShader
         .replace('#include <common>', `#include <common>
           uniform float uTime, uTerrainSize, uGridRes, uArea;
@@ -442,6 +590,7 @@ export class Grass {
           uniform sampler2D uHeightTex;
           attribute vec4 aOffset;
           varying float vT;
+          varying vec3 vGWPos;
           varying vec3 vTint;
           vec4 sampleTerrain(vec2 wp) {
             vec2 g = (wp + uTerrainSize * 0.5) / uTerrainSize * uGridRes;
@@ -477,17 +626,22 @@ export class Grass {
           rp.xz += bend * t * t * s;
           rp.y -= length(bend) * t * t * s * 0.35;
           vec3 transformed = vec3(wp.x, td.r - 0.02, wp.y) + rp;
+          vGWPos = transformed;
           vT = t;
           float hue = fract(aOffset.z * 31.7);
           vTint = mix(vec3(0.85, 1.0, 0.8), vec3(1.12, 1.05, 0.75), hue * hue) * mix(1.0, 0.8, td.b);
         `);
       sh.fragmentShader = sh.fragmentShader
-        .replace('#include <common>', '#include <common>\nvarying float vT;\nvarying vec3 vTint;')
+        .replace('#include <common>', '#include <common>\nvarying float vT;\nvarying vec3 vTint;\nvarying vec3 vGWPos;\nuniform vec3 uSunDir;\nuniform vec3 uSunCol;')
         .replace('#include <normal_fragment_begin>', 'float faceDirection = 1.0;\nvec3 normal = normalize( vNormal );\nvec3 nonPerturbedNormal = normal;')
         .replace('vec4 diffuseColor = vec4( diffuse, opacity );', `
           vec3 gBase = vec3(0.05, 0.085, 0.022);
           vec3 gTip = vec3(0.17, 0.25, 0.065);
           vec4 diffuseColor = vec4(mix(gBase, gTip, vT) * vTint * 1.1, opacity);
+        `)
+        .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+          float gBack = pow(max(dot(normalize(vGWPos - cameraPosition), uSunDir), 0.0), 4.0);
+          totalEmissiveRadiance += diffuseColor.rgb * uSunCol * gBack * vT * 0.8;
         `);
     };
     this.mesh = new THREE.Mesh(g, mat);

@@ -63,9 +63,16 @@ the pause menu (**Esc**) if the frame rate drops.
   away from the player.
 - Splat-mapped terrain (grass, forest floor, dirt road with wheel ruts, rock) with
   anti-tiling, plus light shafts and drifting dust motes in the clearing.
+- Cascaded shadow maps (3 cascades on High, 2 on Medium), so trees cast shadows
+  far into the distance while staying crisp near the player.
+- Screen-space ambient occlusion, volumetric sun shafts through the canopy, and
+  cinematic depth of field that focuses on each cutscene shot's subject.
+- Backlit translucency on leaves, needles and grass. Tree LODs (detailed near,
+  lightweight far) give a longer draw distance, and the forest floor has pebbles,
+  fallen branches, mushrooms and wildflowers.
 - Post-processing: 4× MSAA, bloom, ACES tone mapping, split-tone grade, vignette,
-  chromatic aberration and film grain. Cutscenes add eyelid, blur and desaturation
-  effects (waking up, the final shell blast).
+  subtle chromatic aberration and film grain. Cutscenes add eyelid, blur and
+  desaturation effects (waking up, the final shell blast).
 - Procedurally animated soldiers: gait cycle, two-bone arm IK onto weapon grips,
   aiming, recoil, reloads, sabre swings, bayonet thrusts, get-up and death falls.
 - The HUD is semi-transparent: objective, compass with a waypoint, health, ammo,
@@ -73,6 +80,11 @@ the pause menu (**Esc**) if the frame rate drops.
 - Synthesized audio: gunshots with forest reverb, bolt cycling, bullet whizz,
   impacts, footsteps, explosions, an officer's whistle, birdsong and wind, and adaptive
   music. Dialogue uses the browser's speech synthesis (you can turn it off in settings).
+
+## Adding real 3D assets
+
+See [ASSETS.md](ASSETS.md) for the list of models, animations and textures
+that will replace the procedural stand-ins, and where to put them.
 
 ## Developer shortcuts
 

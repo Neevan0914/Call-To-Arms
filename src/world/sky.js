@@ -1,11 +1,13 @@
 import * as THREE from 'three';
 import { Sky } from 'three/addons/objects/Sky.js';
+import { CSM } from 'three/addons/csm/CSM.js';
 
 // Golden early-morning atmosphere: physical sky, IBL from the sky, warm sun with
 // a texel-snapped shadow frustum that follows the focus point, and haze.
 export class Atmosphere {
-  constructor(scene, renderer, quality) {
+  constructor(scene, renderer, quality, camera) {
     this.scene = scene;
+    this.camera = camera;
     const elevation = 17, azimuth = 128;
     const phi = THREE.MathUtils.degToRad(90 - elevation);
     const theta = THREE.MathUtils.degToRad(azimuth);
@@ -44,8 +46,27 @@ export class Atmosphere {
     this.sun.shadow.bias = -0.00025;
     this.sun.shadow.normalBias = 0.045;
     this.setShadowQuality(quality);
-    scene.add(this.sun);
-    scene.add(this.sun.target);
+    // Cascaded shadow maps on medium/high: crisp shadows near the player and tree
+    // shadows that reach far into the distance. Low keeps a single follow-cam map.
+    this.csm = null;
+    if (camera && quality !== 'low') {
+      const high = quality === 'high';
+      this.csm = new CSM({
+        camera, parent: scene, cascades: high ? 3 : 2, maxFar: high ? 190 : 120, mode: 'practical',
+        shadowMapSize: high ? 2048 : 1536, lightDirection: this.sunDir.clone().negate(), lightIntensity: 3.4,
+        lightNear: 1, lightFar: 700, lightMargin: 180, shadowBias: -0.00015,
+      });
+      this.csm.fade = true;
+      for (const l of this.csm.lights) {
+        l.color.set(0xffd6a6);
+        l.shadow.normalBias = 0.05;
+        l.shadow.radius = 2;
+      }
+      this._csmMats = new Set();
+    } else {
+      scene.add(this.sun);
+      scene.add(this.sun.target);
+    }
 
     this.hemi = new THREE.HemisphereLight(0xb9d0e6, 0x4a3b26, 0.55);
     scene.add(this.hemi);
@@ -66,8 +87,39 @@ export class Atmosphere {
     this.sun.shadow.radius = q === 'low' ? 1 : 2;
   }
 
+  // Enable cascaded shadows on a lit material, keeping any existing shader hooks.
+  setupMaterial(mat) {
+    if (!this.csm || this._csmMats.has(mat) || !mat.isMaterial) return;
+    if (!(mat.isMeshStandardMaterial || mat.isMeshLambertMaterial || mat.isMeshPhongMaterial)) return;
+    this._csmMats.add(mat);
+    const prev = mat.onBeforeCompile;
+    const prevKey = mat.customProgramCacheKey();
+    this.csm.setupMaterial(mat);
+    const hook = mat.onBeforeCompile;
+    mat.onBeforeCompile = function (sh, r) { prev.call(this, sh, r); hook.call(this, sh, r); };
+    mat.customProgramCacheKey = () => prevKey + '|csm';
+    mat.needsUpdate = true;
+  }
+
+  setupScene(root) {
+    if (!this.csm) return;
+    root.traverse((o) => {
+      if (!o.isMesh) return;
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      mats.forEach((m) => this.setupMaterial(m));
+    });
+  }
+
   update(camera, focus) {
     this.sky.position.copy(camera.position);
+    if (this.csm) {
+      if (camera.fov !== this._fov || camera.aspect !== this._aspect) {
+        this._fov = camera.fov; this._aspect = camera.aspect;
+        this.csm.updateFrustums();
+      }
+      this.csm.update();
+      return;
+    }
     const texel = (this.shadowExtent * 2) / this.sun.shadow.mapSize.x;
     const a = Math.round(focus.dot(this._right) / texel) * texel;
     const b = Math.round(focus.dot(this._up) / texel) * texel;

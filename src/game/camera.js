@@ -144,6 +144,15 @@ export class CameraRig {
       cam.rotateZ(n.noise(tt, 13) * 0.04 * s);
       this.trauma = Math.max(0, this.trauma - realDt * 0.9);
     }
+    // cinematic depth of field: on in cutscenes, focused on the shot's subject
+    const W = g.post && g.post.world;
+    if (W) {
+      const cu = W.compMat.uniforms;
+      const cine = this.mode === 'cutscene' && g.settings.quality !== 'low';
+      cu.uDOF.value = damp(cu.uDOF.value, cine ? 1 : 0, 4, realDt);
+      if (cine) cu.uFocus.value = damp(cu.uFocus.value, Math.max(0.5, cam.position.distanceTo(this.cutLook)), 8, realDt);
+      cu.uAperture.value = cine ? 1.1 : 0.9;
+    }
     // handheld idle sway in cutscenes
     if (this.mode === 'cutscene') {
       const n = this.noise, tt = this.t * 0.6;
