@@ -36,6 +36,12 @@ npm run build
 npm run preview
 ```
 
+Single standalone file (everything inlined, opens straight from disk with no server):
+
+```bash
+npm run build:single   # -> dist/CallToArms.html
+```
+
 You need a browser with WebGL2 (current Chrome, Edge, Firefox or Safari) and a
 reasonably capable GPU. The default is the **High** preset; switch to Medium or Low in
 the pause menu (**Esc**) if the frame rate drops.
