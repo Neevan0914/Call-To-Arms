@@ -104,6 +104,8 @@ export class Game {
     progress(0.4, 'Loading models…'); await nextFrame();
     this.assets = await loadAssets((p) => progress(0.4 + p * 0.08, 'Loading models…'));
     setWeaponAssets(this.assets);
+    const embedded = window.__CTA_ASSETS || {};
+    this._voiceLoad = (audio) => audio.loadVoices((path) => embedded[path] || path);
 
     progress(0.5, 'Growing the Thornwood…'); await nextFrame();
     this.vegetation = new Vegetation(this.scene, this.terrain, this.physics, this.T, this.settings.quality, this.assets, renderer, this.atmo.sunDir);
@@ -128,6 +130,7 @@ export class Game {
     this.input = new Input(renderer.domElement);
     this.input.sensitivity = this.settings.sensitivity;
     this.audio = new AudioEngine();
+    this._voiceLoad(this.audio).then((n) => { if (n) console.log(`[voices] ${n} recorded lines`); });
     this.audio.voice = this.settings.voice;
     this.rig = new CameraRig(this.camera, this);
     this.post = new Post(renderer, this.scene, this.camera, this.settings.quality);

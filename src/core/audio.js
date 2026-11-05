@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { rand } from './utils.js';
+import { CAST, lineId, spokenText, VOICE_DIR } from '../game/voices.js';
 
 // Fully procedural audio: synthesized weapons, foley, ambience, music, and
 // optional speech-synthesis voices for dialogue.
@@ -46,6 +47,7 @@ export class AudioEngine {
     let last = 0;
     for (let i = 0; i < len; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; b[i] = last * 3.5; }
     this.enabled = true;
+    this._decodeVoices();
     this._startAmbience();
     this._startMusic();
   }
@@ -389,17 +391,104 @@ export class AudioEngine {
   }
 
   // ---------- voices ----------
-  speak(text, { pitch = 1, rate = 1, voiceIdx = 0 } = {}) {
+  // Recorded dialogue: assets/voice/manifest.json lists the generated clips
+  // ({ lines: { id: { file, dur } } }). Raw files are fetched at load and decoded
+  // once the AudioContext exists; lines without a clip fall back to speech synthesis.
+  async loadVoices(resolveUrl) {
+    this.voiceClips = {};
+    this.voiceRaw = {};
+    try {
+      const res = await fetch(resolveUrl(`${VOICE_DIR}/manifest.json`));
+      if (!res.ok) return 0;
+      const man = await res.json();
+      this.voiceManifest = man.lines || {};
+      await Promise.all(Object.entries(this.voiceManifest).map(async ([id, info]) => {
+        try {
+          const r = await fetch(resolveUrl(`${VOICE_DIR}/${info.file}`));
+          if (r.ok) this.voiceRaw[id] = await r.arrayBuffer();
+        } catch (e) { /* missing clip -> fallback */ }
+      }));
+      if (this.ctx) this._decodeVoices();
+      return Object.keys(this.voiceRaw).length;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  _decodeVoices() {
+    if (!this.voiceRaw) return;
+    for (const [id, buf] of Object.entries(this.voiceRaw)) {
+      delete this.voiceRaw[id];
+      this.ctx.decodeAudioData(buf).then((ab) => { this.voiceClips[id] = ab; }).catch(() => {});
+    }
+  }
+
+  // Returns the clip duration in seconds when a recording played, else 0.
+  playLine(cast, text, { pos = null, fallback = true } = {}) {
+    const id = lineId(cast, text);
+    const clip = this.voiceClips && this.voiceClips[id];
+    if (clip && this.enabled && this.voice) {
+      this.stopVoice();
+      const src = this.ctx.createBufferSource();
+      src.buffer = clip;
+      const { node } = this._spatial(pos, 9);
+      const g = this.ctx.createGain();
+      g.gain.value = 1.35;
+      src.connect(g); g.connect(node);
+      const wet = this.ctx.createGain();
+      wet.gain.value = pos ? 0.22 : 0.08;
+      g.connect(wet); wet.connect(this.reverbIn);
+      src.start();
+      this._voiceSrc = src;
+      return clip.duration;
+    }
+    if (clip && !this.voice) return clip.duration; // voices muted: keep the timing
+    const knownDur = this.voiceManifest && this.voiceManifest[id] ? this.voiceManifest[id].dur : 0;
+    if (fallback && CAST[cast] && CAST[cast].tts) this.speak(spokenText(text), CAST[cast].tts);
+    return knownDur && !this.voice ? knownDur : 0;
+  }
+
+  stopVoice() {
+    if (this._voiceSrc) { try { this._voiceSrc.stop(); } catch (e) { /* */ } this._voiceSrc = null; }
+  }
+
+  // Fallback: browser speech synthesis. Picks the most natural-sounding English voices the
+  // browser offers (neural/"Natural"/Google/enhanced first) and gives each character a
+  // different one, with a gentle per-character pitch and pace.
+  _rankedVoices() {
+    const all = (window.speechSynthesis && window.speechSynthesis.getVoices()) || [];
+    if (this._rankCache && this._rankCache.n === all.length) return this._rankCache.list;
+    const MALE = /daniel|arthur|george|ryan|guy|thomas|oliver|alex|fred|rishi|liam|christopher|eric|andrew|brian|davis|roger|steffan|william|james|male|aaron|reed|ralph|tom|gordon|lee|nathan|connor|mark|david|jacob/i;
+    const FEMALE = /female|samantha|victoria|karen|moira|tessa|fiona|serena|susan|zira|hazel|libby|sonia|aria|jenny|michelle|emma|ava|allison|kate|martha|catherine/i;
+    const score = (v) => {
+      let s = 0;
+      if (/natural|neural|online/i.test(v.name)) s += 8;
+      if (/premium|enhanced/i.test(v.name)) s += 5;
+      if (/google/i.test(v.name)) s += 3;
+      if (/en[-_](GB|IE|AU|NZ|ZA)/i.test(v.lang)) s += 1.5;
+      if (MALE.test(v.name)) s += 4;
+      if (FEMALE.test(v.name)) s -= 6;
+      if (/espeak|compact/i.test(v.name)) s -= 6;
+      return s;
+    };
+    const list = all.filter((v) => /^en/i.test(v.lang)).sort((a, b) => score(b) - score(a));
+    this._rankCache = { n: all.length, list };
+    return list;
+  }
+
+  speak(text, { pitch = 1, rate = 1, slot = 0 } = {}) {
     if (!this.voice || !window.speechSynthesis) return;
     try {
       const u = new SpeechSynthesisUtterance(text);
-      const voices = window.speechSynthesis.getVoices().filter((v) => /en/i.test(v.lang));
-      if (voices.length) u.voice = voices[voiceIdx % voices.length];
-      u.pitch = pitch; u.rate = rate; u.volume = 0.9;
+      const voices = this._rankedVoices();
+      if (voices.length) u.voice = voices[slot % Math.min(voices.length, 6)];
+      // modest shifts: big pitch changes are what makes synthesis sound robotic
+      u.pitch = 1 + (pitch - 1) * 0.6; u.rate = 1 + (rate - 1) * 0.8; u.volume = 0.95;
+      window.speechSynthesis.cancel();
       window.speechSynthesis.speak(u);
     } catch (e) { /* ignore */ }
   }
-  stopSpeech() { try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) { /* */ } }
+  stopSpeech() { this.stopVoice(); try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) { /* */ } }
 
   update(dt, camera) {
     if (!this.enabled) return;

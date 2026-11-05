@@ -113,6 +113,23 @@ At runtime:
   that turn to face you.
 - **Fallback:** if a file is missing, that object falls back to its procedural version.
 
+## Voices
+
+Every character has their own voice, set in `src/game/voices.js`: you, Captain Halvek,
+Sergeant Brannoc, Quartermaster Dell, the two sentries, a Velmoran soldier, Kharzan
+soldiers and scouts, and the Kharzan officer. Each line is pre-recorded with a neural
+voice (Kokoro-82M, Apache-2.0), then given its own audio treatment: shouts, distant calls,
+a lower pitch and grit for the Kharzan, an echo for inner thoughts.
+
+```bash
+npm i --no-save kokoro-js@1.2.1    # one-time; downloads the voice model from huggingface.co
+node scripts/generate-voices.mjs   # -> public/assets/voice/*.mp3 + manifest.json
+```
+
+`node scripts/generate-voices.mjs --list` prints every line with its cast. Any line
+without a recording falls back to the browser's speech synthesis. The fallback picks the
+most natural voices installed and gives each character a different one.
+
 ## Adding more 3D assets
 
 See [ASSETS.md](ASSETS.md) for the list of models, animations and textures
