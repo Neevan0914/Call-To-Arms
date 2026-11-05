@@ -2,9 +2,14 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { clamp, lerp, damp, smoothstep, easeInOut } from '../core/utils.js';
 
-const HIP_Y = 0.94, THIGH = 0.44, SHIN = 0.43, UPPER = 0.29, FORE = 0.28;
-const SH_L = new THREE.Vector3(0.185, 0.17, -0.01);
-const SH_R = new THREE.Vector3(-0.185, 0.17, -0.01);
+// Skeleton proportions (fitted to the soldier models: shoulders 1.40 m, wrists 0.89 m, hips 0.87 m).
+export const HIP_Y = 0.92, THIGH = 0.40, SHIN = 0.39, UPPER = 0.285, FORE = 0.235;
+const SH_L = new THREE.Vector3(0.185, 0.125, -0.01);
+const SH_R = new THREE.Vector3(-0.185, 0.125, -0.01);
+// Arm direction of the models' relaxed A-pose (bind pose), left side.
+const BIND_ARM_L = new THREE.Vector3(0.204, -0.978, 0.04).normalize();
+const BIND_ARM_R = new THREE.Vector3(-0.204, -0.978, 0.04).normalize();
+export const BONE_NAMES = ['hips', 'spine', 'chest', 'neck', 'head', 'shL', 'elL', 'handL', 'shR', 'elR', 'handR', 'thL', 'knL', 'ftL', 'thR', 'knR', 'ftR'];
 
 export const UNIFORMS = {
   velmora: {
@@ -52,8 +57,9 @@ const _q = new THREE.Quaternion(), _e = new THREE.Euler(), _m = new THREE.Matrix
 const DOWN = new THREE.Vector3(0, -1, 0);
 
 export class Humanoid {
-  constructor(cfg, T, { seed = Math.random(), skin = null } = {}) {
+  constructor(cfg, T, { seed = Math.random(), skin = null, model = null } = {}) {
     this.cfg = cfg;
+    this.model = model;
     this.rand = seed;
     const r = (k) => { const x = Math.sin((seed * 9301 + k * 49297) % 233280) * 43758.5453; return x - Math.floor(x); };
     this.skinColor = skin ?? SKINS[Math.floor(r(1) * SKINS.length)];
@@ -61,23 +67,31 @@ export class Humanoid {
     const mats = sharedMaterials(T);
     this.mats = mats;
 
-    const G = (parent, x = 0, y = 0, z = 0) => { const g = new THREE.Group(); g.position.set(x, y, z); parent.add(g); return g; };
+    const G = (parent, x = 0, y = 0, z = 0) => { const g = new THREE.Bone(); g.position.set(x, y, z); parent.add(g); return g; };
     this.root = new THREE.Group();
     this.body = G(this.root);
     this.hips = G(this.body, 0, HIP_Y, 0);
     this.spine = G(this.hips, 0, 0.12, 0);
-    this.chest = G(this.spine, 0, 0.26, 0);
-    this.neck = G(this.chest, 0, 0.21, 0);
-    this.head = G(this.neck, 0, 0.11, 0.012);
+    this.chest = G(this.spine, 0, 0.235, 0);
+    this.neck = G(this.chest, 0, 0.205, 0);
+    this.head = G(this.neck, 0, 0.16, 0.0);
+    this.headgear = G(this.head);
     this.shL = G(this.chest, SH_L.x, SH_L.y, SH_L.z); this.elL = G(this.shL, 0, -UPPER, 0); this.handL = G(this.elL, 0, -FORE, 0);
     this.shR = G(this.chest, SH_R.x, SH_R.y, SH_R.z); this.elR = G(this.shR, 0, -UPPER, 0); this.handR = G(this.elR, 0, -FORE, 0);
-    this.thL = G(this.hips, 0.095, -0.04, 0); this.knL = G(this.thL, 0, -THIGH, 0); this.ftL = G(this.knL, 0, -SHIN, 0);
-    this.thR = G(this.hips, -0.095, -0.04, 0); this.knR = G(this.thR, 0, -THIGH, 0); this.ftR = G(this.knR, 0, -SHIN, 0);
+    this.thL = G(this.hips, 0.095, -0.05, 0); this.knL = G(this.thL, 0, -THIGH, 0); this.ftL = G(this.knL, 0, -SHIN, 0);
+    this.thR = G(this.hips, -0.095, -0.05, 0); this.knR = G(this.thR, 0, -THIGH, 0); this.ftR = G(this.knR, 0, -SHIN, 0);
     this.mount = G(this.chest);
     this.backMount = G(this.chest, 0, 0.03, -0.17);
     this.hipMount = G(this.hips, 0.19, -0.02, 0.02);
 
+    this.bones = BONE_NAMES.map((n) => this[n]);
+    if (model) {
+      // models' heads are a touch larger than the procedural one; fit headgear to them
+      this.headgear.position.set(0, 0.0, 0.006);
+      this.headgear.scale.set(0.9, 0.92, 0.95);
+    }
     this._build();
+    if (model) this._attachModel(model);
 
     this.a = {
       speed: 0, crouch: 0, aim: 0, pitch: 0, weapon: 'none', swing: -1, swingVariant: 0, recoil: 0, reload: -1,
@@ -119,7 +133,10 @@ export class Humanoid {
     const Box = (x, y, z) => new THREE.BoxGeometry(x, y, z);
     const dark = (col, k) => col.clone().multiplyScalar(k);
 
+    const M = this.model;
+    const HG = this.headgear;
     // ---- head ----
+    if (!M) {
     add(this.head, S(0.104, 18, 14), skin, [0, 0, 0], [0, 0, 0], [0.93, 1.06, 1.0], 'skin');
     add(this.head, S(0.07, 14, 10), skin, [0, -0.058, 0.028], [0, 0, 0], [1.05, 0.82, 1.0], 'skin');
     add(this.head, Box(0.024, 0.045, 0.03), dark(skin, 0.95), [0, -0.008, 0.104], [-0.25, 0, 0], [1, 1, 1], 'skin');
@@ -134,35 +151,37 @@ export class Humanoid {
       add(this.head, S(0.02, 6, 4), dark(skin, 0.6), [0.05, 0.05, 0.07], [0, 0, 0], [1.4, 0.5, 0.3], 'skin');
       add(this.head, S(0.018, 6, 4), dark(skin, 0.55), [-0.06, -0.04, 0.075], [0, 0, 0], [1.2, 0.7, 0.3], 'skin');
     }
-    if (c.helmet === 'none' || c.bandage) {
+    }
+    if (!M && (c.helmet === 'none' || c.bandage)) {
       const hair = new THREE.SphereGeometry(0.112, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.52);
       add(this.head, hair, c.hair ?? 0x2a1c12, [0, 0.006, -0.008], [-0.25, 0, 0], [0.97, 1.0, 1.04], 'skin');
     }
     if (c.bandage) {
-      add(this.head, Cyl(0.113, 0.11, 0.035, 18, true), 0xd8cfb8, [0, 0.045, -0.004], [-0.22, 0, 0.12], [0.97, 1, 1.04]);
-      add(this.head, S(0.02, 6, 4), 0x7a2a20, [0.045, 0.06, 0.095], [0, 0, 0], [1.3, 0.8, 0.4]);
+      add(HG, Cyl(0.113, 0.11, 0.035, 18, true), 0xd8cfb8, [0, 0.045, -0.004], [-0.22, 0, 0.12], [0.97, 1, 1.04]);
+      add(HG, S(0.02, 6, 4), 0x7a2a20, [0.045, 0.06, 0.095], [0, 0, 0], [1.3, 0.8, 0.4]);
     }
     if (c.helmet === 'kharzan') {
       const prof = [[0.0, 0.135], [0.05, 0.131], [0.09, 0.112], [0.118, 0.072], [0.129, 0.025], [0.132, -0.01], [0.148, -0.045], [0.163, -0.07], [0.166, -0.077]].map((p) => new THREE.Vector2(p[0], p[1]));
-      add(this.head, new THREE.LatheGeometry(prof, 20), c.helmetColor, [0, 0.055, -0.012], [0, 0, 0], [1, 1, 1.06], 'metal');
-      add(this.head, Box(0.012, 0.022, 0.17), dark(new THREE.Color(c.helmetColor), 0.9), [0, 0.19, -0.012], [0, 0, 0], [1, 1, 1], 'metal');
-      for (const s of [-1, 1]) add(this.head, Cyl(0.009, 0.009, 0.012, 8), 0x22262a, [s * 0.128, 0.09, -0.01], [0, 0, Math.PI / 2], [1, 1, 1], 'metal');
-      add(this.head, Box(0.01, 0.07, 0.008), 0x1d1a17, [0.07, -0.04, 0.07], [0.0, 0, 0.3], [1, 1, 1]); // chin strap
-    } else if (c.helmet === 'velmora') {
+      add(HG, new THREE.LatheGeometry(prof, 20), c.helmetColor, [0, 0.055, -0.012], [0, 0, 0], [1, 1, 1.06], 'metal');
+      add(HG, Box(0.012, 0.022, 0.17), dark(new THREE.Color(c.helmetColor), 0.9), [0, 0.19, -0.012], [0, 0, 0], [1, 1, 1], 'metal');
+      for (const s of [-1, 1]) add(HG, Cyl(0.009, 0.009, 0.012, 8), 0x22262a, [s * 0.128, 0.09, -0.01], [0, 0, Math.PI / 2], [1, 1, 1], 'metal');
+      add(HG, Box(0.01, 0.07, 0.008), 0x1d1a17, [0.07, -0.04, 0.07], [0.0, 0, 0.3], [1, 1, 1]); // chin strap
+    } else if (c.helmet === 'velmora' && !M) {
       const prof = [[0.0, 0.128], [0.06, 0.123], [0.1, 0.098], [0.122, 0.055], [0.128, 0.01], [0.15, -0.006], [0.172, -0.016], [0.174, -0.022]].map((p) => new THREE.Vector2(p[0], p[1]));
-      add(this.head, new THREE.LatheGeometry(prof, 20), c.helmetColor, [0, 0.06, -0.006], [0.06, 0, 0], [1, 1, 1.1], 'metal');
-      add(this.head, Box(0.022, 0.03, 0.2), dark(new THREE.Color(c.helmetColor), 0.92), [0, 0.18, -0.006], [0.06, 0, 0], [1, 1, 1], 'metal');
-      add(this.head, Box(0.03, 0.03, 0.006), c.brass, [0, 0.1, 0.118], [0.3, 0, 0], [1, 1, 1], 'metal');
-      add(this.head, Box(0.01, 0.07, 0.008), 0x3a2618, [0.075, -0.04, 0.065], [0.0, 0, 0.3], [1, 1, 1]);
+      add(HG, new THREE.LatheGeometry(prof, 20), c.helmetColor, [0, 0.06, -0.006], [0.06, 0, 0], [1, 1, 1.1], 'metal');
+      add(HG, Box(0.022, 0.03, 0.2), dark(new THREE.Color(c.helmetColor), 0.92), [0, 0.18, -0.006], [0.06, 0, 0], [1, 1, 1], 'metal');
+      add(HG, Box(0.03, 0.03, 0.006), c.brass, [0, 0.1, 0.118], [0.3, 0, 0], [1, 1, 1], 'metal');
+      add(HG, Box(0.01, 0.07, 0.008), 0x3a2618, [0.075, -0.04, 0.065], [0.0, 0, 0.3], [1, 1, 1]);
     } else if (c.helmet === 'cap') {
-      add(this.head, Cyl(0.132, 0.112, 0.06, 18), c.capColor, [0, 0.105, -0.006], [-0.08, 0, 0], [1.08, 1, 1.15]);
-      add(this.head, Cyl(0.113, 0.113, 0.035, 18), c.band, [0, 0.07, 0.0], [-0.08, 0, 0], [1, 1, 1.05]);
-      add(this.head, new THREE.CylinderGeometry(0.115, 0.115, 0.008, 16, 1, false, -Math.PI / 2, Math.PI), 0x111111, [0, 0.055, 0.02], [0.32, 0, 0], [1, 1, 0.75], 'metal');
-      add(this.head, Box(0.03, 0.034, 0.008), c.brass, [0, 0.105, 0.125], [-0.1, 0, 0], [1, 1, 1], 'metal');
+      add(HG, Cyl(0.132, 0.112, 0.06, 18), c.capColor, [0, 0.105, -0.006], [-0.08, 0, 0], [1.08, 1, 1.15]);
+      add(HG, Cyl(0.113, 0.113, 0.035, 18), c.band, [0, 0.07, 0.0], [-0.08, 0, 0], [1, 1, 1.05]);
+      add(HG, new THREE.CylinderGeometry(0.115, 0.115, 0.008, 16, 1, false, -Math.PI / 2, Math.PI), 0x111111, [0, 0.055, 0.02], [0.32, 0, 0], [1, 1, 0.75], 'metal');
+      add(HG, Box(0.03, 0.034, 0.008), c.brass, [0, 0.105, 0.125], [-0.1, 0, 0], [1, 1, 1], 'metal');
     } else if (c.helmet === 'sidecap') {
-      add(this.head, Box(0.1, 0.065, 0.23), c.capColor, [0, 0.105, 0], [0, 0, 0.18], [1, 1, 1]);
-      add(this.head, Box(0.02, 0.02, 0.006), c.brass, [0.03, 0.105, 0.116], [0, 0, 0], [1, 1, 1], 'metal');
+      add(HG, Box(0.1, 0.065, 0.23), c.capColor, [0, 0.105, 0], [0, 0, 0.18], [1, 1, 1]);
+      add(HG, Box(0.02, 0.02, 0.006), c.brass, [0.03, 0.105, 0.116], [0, 0, 0], [1, 1, 1], 'metal');
     }
+    if (!M) {
     // neck
     add(this.neck, Cyl(0.048, 0.054, 0.11, 10), skin, [0, 0.03, 0.0], [0, 0, 0], [1, 1, 1], 'skin');
 
@@ -233,6 +252,7 @@ export class Humanoid {
       add(ft, Box(0.102, 0.02, 0.25), 0x120e0b, [0, -0.07, 0.05], [0, 0, 0], [1, 1, 1]);
     }
 
+    }
     this.meshes = [];
     for (const [bone, b] of lists) {
       for (const k of ['cloth', 'skin', 'metal']) {
@@ -243,6 +263,52 @@ export class Humanoid {
         this.meshes.push(mesh);
       }
     }
+  }
+
+  // Bind pose of the soldier models (relaxed A-pose) used for auto-rigging.
+  setBindPose() {
+    for (const b of this.bones) b.rotation.set(0, 0, 0);
+    this.body.rotation.set(0, 0, 0);
+    this.body.position.set(0, 0, 0);
+    this.hips.position.y = HIP_Y;
+    this.shL.quaternion.setFromUnitVectors(DOWN, BIND_ARM_L);
+    this.shR.quaternion.setFromUnitVectors(DOWN, BIND_ARM_R);
+  }
+
+  _attachModel(model) {
+    const { template, matFor, showHelmet } = model;
+    this.skeleton = new THREE.Skeleton(this.bones, template.boneInverses);
+    const ident = new THREE.Matrix4();
+    const sphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 1.7);
+    this.lodMeshes = template.lods.map((parts, li) => parts
+      .filter((p) => p.key !== 'helmet' || showHelmet)
+      .map((p) => {
+        const m = new THREE.SkinnedMesh(p.geometry, matFor(p));
+        m.bind(this.skeleton, ident);
+        m.boundingSphere = sphere;
+        m.castShadow = true; m.receiveShadow = true;
+        m.userData.sharedGeometry = true;
+        m.visible = li === 0;
+        this.root.add(m);
+        return m;
+      }));
+    this.lod = 0;
+    this.meshes.push(...this.lodMeshes.flat());
+  }
+
+  setLod(i) {
+    if (!this.lodMeshes || i === this.lod || !this.lodMeshes[i]) return;
+    this.lod = i;
+    this.lodMeshes.forEach((list, k) => list.forEach((m) => { m.visible = k === i; }));
+  }
+
+  // models' hands extend past the wrist bone: aim the palm (not the wrist) at a grip
+  _palm(target, S) {
+    if (!this.model) return target;
+    const d = this._v4.subVectors(S, target);
+    const l = d.length();
+    if (l > 1e-4) target.addScaledVector(d, 0.075 / l);
+    return target;
   }
 
   setWeaponModel(model) {
@@ -443,6 +509,7 @@ export class Humanoid {
         this._gL.lerp(mag, reloadK);
         this._gL.y -= reloadK * Math.max(0, Math.sin(a.reload * Math.PI * 4)) * 0.06;
       }
+      this._palm(this._gR, SH_R); this._palm(this._gL, SH_L);
       this._ik(this.shR, this.elR, SH_R, this._gR, this._v3.set(-0.6, -0.35, -0.2).add(SH_R));
       this._ik(this.shL, this.elL, SH_L, this._gL, this._v3.set(0.3, -0.6, 0.0).add(SH_L));
     } else if (w === 'sword') {
@@ -478,6 +545,7 @@ export class Humanoid {
       this._setMount(p[0], p[1] + Math.sin(ph * 2) * 0.01 * wk, p[2], r[0], r[1], r[2]);
       this.mount.updateMatrix();
       this._gR.copy(this.weaponModel.userData.gripR).applyMatrix4(this.mount.matrix);
+      this._palm(this._gR, SH_R);
       this._ik(this.shR, this.elR, SH_R, this._gR, this._v3.set(-0.5, -0.5, -0.1).add(SH_R));
       this._freeArm(this.shL, this.elL, 1, -swingArm * 0.6 - 0.25, 0.25, 0.9);
     } else {

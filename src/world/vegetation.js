@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { mulberry32, Simplex2 } from '../core/noise.js';
 import { WORLD_SIZE, SEG, FORT, SPAWN, BOUND } from './terrain.js';
+import { TreeSystem, SPECIES } from './trees.js';
 
 const TILE = 100;
 
@@ -284,7 +285,7 @@ export const SUN_UNIFORMS = {
 };
 
 // Adds wind sway + backlit translucency to an (instanced) foliage material.
-function windify(mat, uniforms, strength = 0.12, heightRef = 12, transl = 0.5) {
+export function windify(mat, uniforms, strength = 0.12, heightRef = 12, transl = 0.5) {
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uTime = uniforms.uTime;
     sh.uniforms.uSunDir = SUN_UNIFORMS.uSunDir;
@@ -322,7 +323,7 @@ function windify(mat, uniforms, strength = 0.12, heightRef = 12, transl = 0.5) {
 }
 
 export class Vegetation {
-  constructor(scene, terrain, physics, T, quality) {
+  constructor(scene, terrain, physics, T, quality, assets = {}, renderer = null, sunDir = null) {
     this.scene = scene;
     this.terrain = terrain;
     this.uniforms = { uTime: { value: 0 } };
@@ -358,6 +359,8 @@ export class Vegetation {
     stumpGeo.translate(0, 0.3, 0);
 
     const density = quality === 'low' ? 0.6 : quality === 'medium' ? 0.8 : 1;
+    const useModels = !!(assets.pine || assets.birch || assets.oak) && renderer;
+    const treeList = [];
     // Placement on a jittered grid; dense in the playable corridor.
     const buckets = new Map(); // tileKey -> {pine:[], oak:[], bush:[], fern:[], rock:[], log:[], stump:[]}
     const tileOf = (x, z) => {
@@ -388,7 +391,19 @@ export class Vegetation {
         const r = rnd();
         const b = tileOf(x, z);
         const y = terrain.getHeight(x, z);
-        if (r < f * 0.82 * density) {
+        if (r < f * 0.82 * density && useModels) {
+          // model forest: pine-dominated, with oak groves and birch along open edges
+          const zone = terrain.noise.noise(x * 0.011 + 300, z * 0.011 - 200);
+          const rr = rnd();
+          let sp = zone > 0.3 ? (rr < 0.6 ? 'oak' : rr < 0.8 ? 'birch' : 'pine')
+            : zone < -0.35 ? (rr < 0.55 ? 'birch' : 'pine')
+            : (rr < 0.74 ? 'pine' : rr < 0.88 ? 'birch' : 'oak');
+          if (f < 0.45 && rnd() < 0.35) sp = 'birch';
+          if (!assets[sp]) sp = ['pine', 'birch', 'oak'].find((k) => assets[k]);
+          const sc = sp === 'pine' ? 0.72 + rnd() * 0.55 : sp === 'birch' ? 0.8 + rnd() * 0.35 : 0.85 + rnd() * 0.4;
+          treeList.push({ x, y: y - 0.1, z, ry: rnd() * 6.28, s: sc, species: sp, c: 0.82 + rnd() * 0.3 });
+          physics.addCircle(x, z, SPECIES[sp].trunkR * sc, 12 * sc, 'wood');
+        } else if (r < f * 0.82 * density) {
           const isPine = rnd() < 0.68;
           const sc = isPine ? 0.7 + rnd() * 0.75 : 0.75 + rnd() * 0.55;
           const geo = isPine ? pine : oak;
@@ -486,6 +501,10 @@ export class Vegetation {
     this.lodNear = quality === 'low' ? 110 : 160;
     this.drawDist = quality === 'low' ? 330 : 470;
 
+    this.treeSystem = null;
+    if (useModels && treeList.length) {
+      this.treeSystem = new TreeSystem(scene, renderer, assets, treeList, { windify, uniforms: this.uniforms, quality, sunDir: sunDir || new THREE.Vector3(0, 1, 0) });
+    }
     this._addLightShafts(T);
   }
 
@@ -516,6 +535,7 @@ export class Vegetation {
 
   update(dt, camera) {
     this.uniforms.uTime.value += dt;
+    if (this.treeSystem) this.treeSystem.update(camera);
     const cp = camera.position;
     for (const t of this.tiles) {
       const u = t.userData;

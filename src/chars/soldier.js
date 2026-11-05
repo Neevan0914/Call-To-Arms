@@ -11,7 +11,7 @@ export class Soldier {
     const T = game.T;
     this.faction = opts.faction;
     this.name = opts.name || (this.faction === 'kharzan' ? 'Kharzan Soldier' : 'Velmoran Soldier');
-    this.h = new Humanoid(UNIFORMS[opts.uniform], T, { seed: (SEED++ * 0.6180339) % 1, skin: opts.skin });
+    this.h = new Humanoid(UNIFORMS[opts.uniform], T, { seed: (SEED++ * 0.6180339) % 1, skin: opts.skin, model: game.modelFor(opts.uniform) });
     game.scene.add(this.h.root);
     this.position = this.h.root.position;
     this.position.copy(opts.pos);

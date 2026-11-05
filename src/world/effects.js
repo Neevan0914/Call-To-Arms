@@ -116,6 +116,31 @@ export class Effects {
     this.smoke = new ParticleSystem(scene, 2200, T.smoke, THREE.NormalBlending, true);
     this.emitters = [];
 
+    // bullet trails: camera-facing ribbons along the bullet path that linger and fade
+    this.trails = [];
+    {
+      const c = document.createElement('canvas'); c.width = 64; c.height = 8;
+      const ctx = c.getContext('2d');
+      const g = ctx.createLinearGradient(0, 0, 64, 0);
+      g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, 64, 8);
+      const tex = new THREE.CanvasTexture(c);
+      const geo = new THREE.PlaneGeometry(1, 1, 1, 8);
+      geo.rotateX(-Math.PI / 2); // lie in XZ, length along Z
+      geo.translate(0, 0, 0.5);
+      // fade toward the shooter end and the far end
+      const uv = geo.attributes.uv, pos = geo.attributes.position;
+      const col = new Float32Array(pos.count * 3);
+      for (let i = 0; i < pos.count; i++) { const z = pos.getZ(i); const a = Math.min(1, z * 6) * (1 - Math.pow(z, 3) * 0.6); col[i * 3] = col[i * 3 + 1] = col[i * 3 + 2] = a; }
+      geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      for (let i = 0; i < 48; i++) {
+        const mat = new THREE.MeshBasicMaterial({ map: tex, color: 0xd8dde0, transparent: true, opacity: 0, depthWrite: false, vertexColors: true, side: THREE.DoubleSide, fog: true });
+        const m = new THREE.Mesh(geo, mat);
+        m.visible = false; m.frustumCulled = false; m.matrixAutoUpdate = false; m.renderOrder = 3;
+        scene.add(m);
+        this.trails.push({ mesh: m, t: 0, life: 1, from: new THREE.Vector3(), dir: new THREE.Vector3(), len: 0, w: 0.03, a0: 0.3, drift: new THREE.Vector3() });
+      }
+    }
     // tracers
     this.tracers = [];
     const tg = new THREE.CylinderGeometry(0.012, 0.012, 1, 4, 1, true);
@@ -193,7 +218,24 @@ export class Effects {
     }
   }
 
+  // A lingering air/smoke streak along a bullet's path.
+  trail(from, to, strength = 1) {
+    const t = this.trails.reduce((a, b) => (a.t / a.life > b.t / b.life || !b.mesh.visible ? (b.mesh.visible ? a : b) : a), this.trails[0]);
+    const T = this.trails.find((x) => !x.mesh.visible) || t;
+    T.from.copy(from);
+    T.dir.subVectors(to, from);
+    T.len = Math.min(T.dir.length(), 160);
+    if (T.len < 0.5) return;
+    T.dir.normalize();
+    T.t = 0; T.life = 0.7 + Math.random() * 0.5 * strength;
+    T.w = 0.025 + 0.01 * strength;
+    T.a0 = 0.22 + 0.12 * strength;
+    T.drift.set((Math.random() - 0.5) * 0.15, 0.12 + Math.random() * 0.1, (Math.random() - 0.5) * 0.15);
+    T.mesh.visible = true;
+  }
+
   tracer(from, to, chance = 1) {
+    this.trail(from, to, chance > 0.5 ? 1 : 0.6);
     if (Math.random() > chance) return;
     const t = this.tracers.find((x) => !x.active);
     if (!t) return;
@@ -268,6 +310,30 @@ export class Effects {
   }
 
   update(dt, camera) {
+    const cam = camera.position;
+    const toCam = this._tc || (this._tc = new THREE.Vector3());
+    const right = this._tr || (this._tr = new THREE.Vector3());
+    const nrm = this._tn || (this._tn = new THREE.Vector3());
+    const mid = this._tm || (this._tm = new THREE.Vector3());
+    for (const T of this.trails) {
+      if (!T.mesh.visible) continue;
+      T.t += dt;
+      const k = T.t / T.life;
+      if (k >= 1) { T.mesh.visible = false; continue; }
+      T.from.addScaledVector(T.drift, dt);
+      mid.copy(T.from).addScaledVector(T.dir, T.len * 0.5);
+      toCam.subVectors(cam, mid).normalize();
+      right.crossVectors(T.dir, toCam).normalize();
+      nrm.crossVectors(right, T.dir).normalize();
+      const w = T.w * (1 + k * 5);
+      const e = T.mesh.matrix.elements;
+      e[0] = right.x * w; e[1] = right.y * w; e[2] = right.z * w; e[3] = 0;
+      e[4] = nrm.x; e[5] = nrm.y; e[6] = nrm.z; e[7] = 0;
+      e[8] = T.dir.x * T.len; e[9] = T.dir.y * T.len; e[10] = T.dir.z * T.len; e[11] = 0;
+      e[12] = T.from.x; e[13] = T.from.y; e[14] = T.from.z; e[15] = 1;
+      T.mesh.matrixWorldNeedsUpdate = true;
+      T.mesh.material.opacity = T.a0 * (1 - k) * (1 - k);
+    }
     for (const t of this.tracers) {
       if (!t.active) continue;
       t.head += t.speed * dt;

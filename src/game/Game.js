@@ -15,6 +15,20 @@ import { Story } from './story.js';
 import { Player } from '../chars/player.js';
 import { Soldier } from '../chars/soldier.js';
 import { nextFrame, clamp } from '../core/utils.js';
+import { loadAssets } from '../core/assets.js';
+import { Humanoid, UNIFORMS } from '../chars/humanoid.js';
+import { buildSoldierTemplate, materialFor } from '../chars/modelrig.js';
+import { setWeaponAssets } from '../chars/weapons.js';
+
+// Which soldier model / tint / headgear each uniform uses.
+const MODEL_MAP = {
+  player: { model: 'rifleman', tint: 'velmora', helmet: false },
+  velmora: { model: 'rifleman', tint: 'velmora', helmet: true },
+  velmoraOfficer: { model: 'gunner', tint: 'officer', helmet: false },
+  velmoraQM: { model: 'rifleman', tint: 'velmora', helmet: false },
+  kharzan: { model: 'gunner', tint: 'kharzan', helmet: false },
+  kharzanCoat: { model: 'gunner', tint: 'kharzanCoat', helmet: false },
+};
 
 const QUALITY = {
   high: { pr: 1.5, grass: 140000, shadow: 'high' },
@@ -87,14 +101,28 @@ export class Game {
     this.atmo = new Atmosphere(this.scene, renderer, Q.shadow, this.camera);
     SUN_UNIFORMS.uSunDir.value.copy(this.atmo.sunDir);
 
-    progress(0.45, 'Growing the Thornwood…'); await nextFrame();
-    this.vegetation = new Vegetation(this.scene, this.terrain, this.physics, this.T, this.settings.quality);
+    progress(0.4, 'Loading models…'); await nextFrame();
+    this.assets = await loadAssets((p) => progress(0.4 + p * 0.08, 'Loading models…'));
+    setWeaponAssets(this.assets);
+
+    progress(0.5, 'Growing the Thornwood…'); await nextFrame();
+    this.vegetation = new Vegetation(this.scene, this.terrain, this.physics, this.T, this.settings.quality, this.assets, renderer, this.atmo.sunDir);
     this.grass = new Grass(this.scene, this.terrain, Q.grass);
 
     progress(0.62, 'Raising Fort Velmar…'); await nextFrame();
     this.fort = new Fort(this.scene, this.terrain, this.physics, this.T);
 
     progress(0.72, 'Mustering soldiers…'); await nextFrame();
+    this.soldierTemplates = {};
+    for (const [k, lodK] of [['rifleman', 'riflemanLod'], ['gunner', 'gunnerLod']]) {
+      if (!this.assets[k]) continue;
+      try {
+        const H = new Humanoid(UNIFORMS.velmora, this.T, { seed: 0.5 });
+        const scenes = [this.assets[k], this.assets[lodK] || this.assets[k]];
+        this.soldierTemplates[k] = buildSoldierTemplate(scenes, H);
+      } catch (e) { console.warn('[assets] soldier rig failed', k, e); }
+      await nextFrame();
+    }
     this.effects = new Effects(this.scene, this.T, this);
     this.effects.addFire(this.fort.campfire, 1);
     this.input = new Input(renderer.domElement);
@@ -161,6 +189,14 @@ export class Game {
     else { this.audio.ctx && this.audio.ctx.resume(); window.speechSynthesis && window.speechSynthesis.resume(); this.input.lock(); }
   }
 
+  // Model options for a uniform (null -> procedural soldier).
+  modelFor(uniform) {
+    const m = MODEL_MAP[uniform];
+    const tpl = m && this.soldierTemplates && this.soldierTemplates[m.model];
+    if (!tpl) return null;
+    return { template: tpl, showHelmet: m.helmet, matFor: (part) => materialFor(tpl, part, m.tint) };
+  }
+
   // ---------- actors ----------
   spawnSoldier(opts) {
     const s = new Soldier(this, opts);
@@ -173,7 +209,7 @@ export class Game {
   removeSoldier(s) {
     this.scene.remove(s.h.root);
     if (s.droppedWeapon) this.scene.remove(s.droppedWeapon);
-    s.h.meshes.forEach((m) => m.geometry.dispose());
+    s.h.meshes.forEach((m) => { if (!m.userData.sharedGeometry) m.geometry.dispose(); });
     this.actors = this.actors.filter((a) => a !== s);
     this.soldiers = this.soldiers.filter((a) => a !== s);
   }
@@ -259,6 +295,8 @@ export class Game {
       this.story.update(dt, realDt);
       if (this.started) this.player.update(dt);
       for (const s of this.soldiers) s.update(dt);
+      const cp = this.camera.position;
+      for (const s of this.soldiers) if (s.h.lodMeshes) s.h.setLod(s.position.distanceTo(cp) > 30 ? 1 : 0);
       this.fort.update(dt, this.time);
       this.effects.update(dt, this.camera);
       this.rig.update(dt, realDt);

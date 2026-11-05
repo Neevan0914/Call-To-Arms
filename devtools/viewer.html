@@ -1,0 +1,52 @@
+<!doctype html><html><body style="margin:0;background:#888">
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+const params = new URLSearchParams(location.search);
+const file = params.get('f'), view = params.get('v') || 'front', zoom = +(params.get('z') || 1);
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+r.setSize(innerWidth, innerHeight); document.body.appendChild(r.domElement);
+r.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x9aa0a6);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 2.2));
+const d = new THREE.DirectionalLight(0xffffff, 2); d.position.set(2, 3, 4); scene.add(d);
+const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
+loader.load(file, (g) => {
+  const o = g.scene; scene.add(o);
+  const lod = params.get('lod');
+  if (lod !== null) {
+    const keep = [];
+    o.traverse((n) => { if (n.isMesh) keep.push(n); });
+    keep.forEach((n) => { n.visible = n.name.startsWith('lod' + lod) || (n.parent && n.parent.name.startsWith('lod' + lod)); });
+    const nodes = []; o.traverse((n) => nodes.push(n.name)); console.log(nodes.join(','));
+  }
+  const box = new THREE.Box3().setFromObject(o); const c = box.getCenter(new THREE.Vector3()); const s = box.getSize(new THREE.Vector3());
+  const half = Math.max(s.x, s.y, s.z) * 0.55 / zoom;
+  const asp = innerWidth / innerHeight;
+  const cam = new THREE.OrthographicCamera(-half * asp, half * asp, half, -half, 0.01, 100);
+  const dist = 20;
+  const dirs = { front: [0, 0, 1], back: [0, 0, -1], side: [1, 0, 0], left: [-1, 0, 0], top: [0, 1, 0.001], bottom: [0, -1, 0.001] };
+  const dv = new THREE.Vector3(...dirs[view]);
+  const tgt = params.has('cx') ? new THREE.Vector3(+params.get('cx'), +params.get('cy'), +params.get('cz')) : c;
+  cam.position.copy(tgt).addScaledVector(dv, dist); cam.lookAt(tgt);
+  // grid lines every 0.1m
+  const grid = new THREE.Group();
+  const mat = new THREE.LineBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.35, depthTest: false });
+  const mat2 = new THREE.LineBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.8, depthTest: false });
+  const step = +(params.get('g') || 0.1);
+  for (let i = -60; i <= 60; i++) {
+    const v = i * step;
+    const ptsH = [], ptsV = [];
+    if (view === 'front' || view === 'back') { ptsH.push(new THREE.Vector3(-20, v, 0), new THREE.Vector3(20, v, 0)); ptsV.push(new THREE.Vector3(v, -20, 0), new THREE.Vector3(v, 20, 0)); }
+    else if (view === 'side' || view === 'left') { ptsH.push(new THREE.Vector3(0, v, -20), new THREE.Vector3(0, v, 20)); ptsV.push(new THREE.Vector3(0, -20, v), new THREE.Vector3(0, 20, v)); }
+    else { ptsH.push(new THREE.Vector3(-20, 0, v), new THREE.Vector3(20, 0, v)); ptsV.push(new THREE.Vector3(v, 0, -20), new THREE.Vector3(v, 0, 20)); }
+    const m = i % 5 === 0 ? mat2 : mat;
+    grid.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(ptsH), m));
+    grid.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(ptsV), m));
+  }
+  grid.renderOrder = 10; scene.add(grid);
+  r.render(scene, cam);
+  window.__done = JSON.stringify({ min: box.min.toArray().map(x=>+x.toFixed(3)), max: box.max.toArray().map(x=>+x.toFixed(3)) });
+});
+</script></body></html>

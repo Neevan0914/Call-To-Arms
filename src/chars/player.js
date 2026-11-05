@@ -11,7 +11,7 @@ export class Player {
     this.isPlayer = true;
     this.faction = 'velmora';
     this.name = 'You';
-    this.h = new Humanoid(UNIFORMS.player, T, { seed: 0.4242, skin: 0xd9a983 });
+    this.h = new Humanoid(UNIFORMS.player, T, { seed: 0.4242, skin: 0xd9a983, model: game.modelFor('player') });
     game.scene.add(this.h.root);
     this.position = this.h.root.position;
     this.vel = new THREE.Vector3();

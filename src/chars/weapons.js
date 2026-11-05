@@ -70,7 +70,36 @@ function profile(points, thickness, bevel = 0.005) {
 const cylZ = (r1, r2, len, seg = 10) => { const g = new THREE.CylinderGeometry(r1, r2, len, seg); g.rotateX(Math.PI / 2); return g; };
 const box = (x, y, z) => new THREE.BoxGeometry(x, y, z);
 
+// Optional glTF weapon models (stock at origin, barrel along +X). When present they
+// replace the procedural rifles; grip points were measured on the models.
+const ASSETS = { rifle: null, lmg: null };
+export function setWeaponAssets(a) { ASSETS.rifle = a.rifle || null; ASSETS.lmg = a.lmg || null; }
+
+function fromAsset(src) {
+  const g = new THREE.Group();
+  const m = src.clone(true);
+  m.rotation.y = -Math.PI / 2; // +X (barrel) -> +Z (forward)
+  m.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  g.add(m);
+  return g;
+}
+
 export function buildRifle(T, { bayonet = false } = {}) {
+  if (ASSETS.rifle) {
+    const g = fromAsset(ASSETS.rifle);
+    if (bayonet) {
+      const M = weaponMaterials(T);
+      const P = new Parts();
+      P.add(M.steel, box(0.004, 0.022, 0.38), 0, -0.012, 1.27);
+      P.add(M.metal, box(0.02, 0.035, 0.05), 0, -0.006, 1.09);
+      g.add(P.build());
+    }
+    g.userData = {
+      gripR: new THREE.Vector3(0, -0.045, 0.33), gripL: new THREE.Vector3(0, -0.018, 0.66),
+      muzzle: new THREE.Vector3(0, 0.007, 1.1), type: 'rifle',
+    };
+    return g;
+  }
   const M = weaponMaterials(T);
   const P = new Parts();
   P.add(M.wood, profile([
@@ -105,6 +134,14 @@ export function buildRifle(T, { bayonet = false } = {}) {
 
 // Automatic rifle styled after the interwar Rkm wz.28 / BAR family.
 export function buildLMG(T) {
+  if (ASSETS.lmg) {
+    const g = fromAsset(ASSETS.lmg);
+    g.userData = {
+      gripR: new THREE.Vector3(0, -0.1, 0.37), gripL: new THREE.Vector3(0, -0.035, 0.72),
+      muzzle: new THREE.Vector3(0, 0.0, 1.1), type: 'lmg',
+    };
+    return g;
+  }
   const M = weaponMaterials(T);
   const P = new Parts();
   // butt stock

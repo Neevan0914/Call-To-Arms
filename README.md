@@ -87,7 +87,33 @@ the pause menu (**Esc**) if the frame rate drops.
   impacts, footsteps, explosions, an officer's whistle, birdsong and wind, and adaptive
   music. Dialogue uses the browser's speech synthesis (you can turn it off in settings).
 
-## Adding real 3D assets
+## 3D assets
+
+The game now uses real models for the soldiers, the rifle, the Rkm M28 and the forest
+(pine, birch, oak). The high-poly source files live in `assets-src/`, which is git-ignored
+because it's large. To rebuild the game-ready versions in `public/assets/`, run:
+
+```bash
+node scripts/process-assets.mjs
+```
+
+That script:
+- **Soldiers:** cuts them to about 25k triangles, plus a distant version of about 9k.
+- **Trees:** builds a near and a mid-distance version (the mid one thins leaf clusters
+  and enlarges the ones it keeps), and repairs broken normals.
+- **Weapons:** cuts them to about 15k triangles.
+
+At runtime:
+- **Soldier rigging:** the models are static, so `src/chars/modelrig.js` skins each vertex
+  onto the game's animation skeleton. The skin weights respect each material (sleeves follow
+  the arms, puttees follow the legs) and blend smoothly at the joints.
+- **Factions:** the Velmorans use the rifleman model in olive. The Kharzan use the gunner
+  model (tall boots), tinted slate grey, with their own coal-scuttle helmet.
+- **Distant trees:** pictures of each tree, rendered from 8 angles at load, shown on cards
+  that turn to face you.
+- **Fallback:** if a file is missing, that object falls back to its procedural version.
+
+## Adding more 3D assets
 
 See [ASSETS.md](ASSETS.md) for the list of models, animations and textures
 that will replace the procedural stand-ins, and where to put them.
