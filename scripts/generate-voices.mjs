@@ -4,6 +4,7 @@
 //   npm i --no-save kokoro-js@1.2.1        # one-time; downloads the model from huggingface.co
 //   node scripts/generate-voices.mjs        # writes public/assets/voice/*.mp3 + manifest.json
 //   node scripts/generate-voices.mjs --list # just print the lines and their cast
+//   node scripts/generate-voices.mjs --force # re-record every line
 //
 // Lines are read from src/game/story.js (this.say / this.bark calls). Each character's
 // voice, speed and audio treatment come from src/game/voices.js. Requires ffmpeg.
@@ -13,6 +14,7 @@ import { CAST, lineId, spokenText } from '../src/game/voices.js';
 
 const OUT = 'public/assets/voice';
 const listOnly = process.argv.includes('--list');
+const force = process.argv.includes('--force');
 
 // ---- collect lines ----
 const src = readFileSync('src/game/story.js', 'utf8');
@@ -38,18 +40,21 @@ if (listOnly) {
 }
 
 // ---- audio treatments (ffmpeg filter chains, 24 kHz mono input) ----
-const LEVEL = 'highpass=f=75,acompressor=threshold=-21dB:ratio=3:attack=5:release=90,loudnorm=I=-17:TP=-1.5:LRA=7';
+// trim -> character effect -> loudness normalisation (per effect) -> limiter
+const TRIM = 'silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.04,areverse,silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.1,areverse';
+const COMP = 'highpass=f=75,acompressor=threshold=-21dB:ratio=3:attack=5:release=90';
 const pitch = (k) => `asetrate=24000*${k},aresample=24000,atempo=${(1 / k).toFixed(4)}`;
 const FX = {
-  clean: LEVEL,
-  thought: `${LEVEL},lowpass=f=6500,aecho=0.8:0.6:45|95:0.32|0.18,volume=0.85`,
-  gruff: `${pitch(0.94)},equalizer=f=180:t=q:w=1:g=3,${LEVEL}`,
-  shout: `equalizer=f=2600:t=q:w=1:g=4,${LEVEL},volume=1.15,alimiter=limit=0.85`,
-  shoutFar: `equalizer=f=2600:t=q:w=1:g=4,${LEVEL},aecho=0.8:0.5:85|170:0.3|0.16,lowpass=f=5200`,
-  enemy: `${pitch(0.9)},equalizer=f=1300:t=q:w=1.2:g=3,${LEVEL}`,
-  enemyFar: `${pitch(0.9)},${LEVEL},lowpass=f=2300,aecho=0.8:0.6:120|260:0.35|0.22,volume=0.85`,
-  officer: `${pitch(0.88)},${LEVEL},aecho=0.8:0.3:35:0.14`,
+  clean: { chain: COMP, lufs: -17 },
+  thought: { chain: `${COMP},lowpass=f=6500,aecho=0.9:0.9:45|95:0.32|0.18`, lufs: -19 },
+  gruff: { chain: `${pitch(0.94)},equalizer=f=180:t=q:w=1:g=3,${COMP}`, lufs: -17 },
+  shout: { chain: `equalizer=f=2600:t=q:w=1:g=4,${COMP}`, lufs: -16 },
+  shoutFar: { chain: `equalizer=f=2600:t=q:w=1:g=4,${COMP},aecho=0.9:0.9:85|170:0.3|0.16,lowpass=f=5200`, lufs: -18 },
+  enemy: { chain: `${pitch(0.9)},equalizer=f=1300:t=q:w=1.2:g=3,${COMP}`, lufs: -17 },
+  enemyFar: { chain: `${pitch(0.9)},${COMP},lowpass=f=2300,aecho=0.9:0.9:120|260:0.35|0.22`, lufs: -20 },
+  officer: { chain: `${pitch(0.88)},${COMP},aecho=0.9:0.9:35:0.14`, lufs: -17 },
 };
+const fxChain = (fx) => `${TRIM},${FX[fx].chain},loudnorm=I=${FX[fx].lufs}:TP=-2:LRA=8,alimiter=limit=0.8:level=false,apad=pad_dur=0.15`;
 
 // ---- synthesize ----
 let KokoroTTS;
@@ -57,7 +62,13 @@ try { ({ KokoroTTS } = await import('kokoro-js')); } catch (e) {
   console.error('kokoro-js is not installed. Run: npm i --no-save kokoro-js@1.2.1');
   process.exit(1);
 }
-const tts = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', { dtype: 'fp32', device: 'cpu' });
+const short = (e) => `${e && e.name}: ${String(e && e.message).slice(0, 400)}${e && e.cause ? ` (cause: ${String(e.cause.message || e.cause).slice(0, 200)})` : ''}`;
+process.on('uncaughtException', (e) => { console.error('[uncaught]', short(e)); process.exit(1); });
+process.on('unhandledRejection', (e) => { console.error('[unhandled]', short(e)); process.exit(1); });
+let tts;
+try {
+  tts = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', { dtype: 'fp32', device: 'cpu' });
+} catch (e) { console.error('model load failed:', short(e)); process.exit(1); }
 mkdirSync(OUT, { recursive: true });
 const tmp = `${OUT}/.tmp.wav`;
 const manifest = { lines: {} };
@@ -65,10 +76,10 @@ for (const [id, l] of lines) {
   const c = CAST[l.cast];
   const file = `${id}.mp3`;
   const out = `${OUT}/${file}`;
-  if (!existsSync(out)) {
+  if (force || !existsSync(out)) {
     const audio = await tts.generate(spokenText(l.text), { voice: c.kokoro, speed: c.speed });
     await audio.save(tmp);
-    execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', tmp, '-af', `${FX[c.fx]},apad=pad_dur=0.12`, '-ac', '1', '-ar', '24000', '-c:a', 'libmp3lame', '-b:a', '48k', out]);
+    execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', tmp, '-af', fxChain(c.fx), '-ac', '1', '-ar', '24000', '-c:a', 'libmp3lame', '-b:a', '48k', out]);
   }
   const dur = parseFloat(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', out]).toString());
   manifest.lines[id] = { file, dur: +dur.toFixed(2), cast: l.cast, text: l.text };
