@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 
 // Loads the game's glTF assets. Every asset is optional: if a file is missing or fails
 // to load, the game falls back to its procedural stand-in for that object.
@@ -55,9 +56,7 @@ export async function loadTextures(onProgress) {
   let sky = null;
   jobs.push(loader.loadAsync(assetUrl(SKY_FILES.ldr)).then((t) => { sky = t; }).catch(() => {}));
   let hdr = null;
-  jobs.push(import('three/addons/loaders/RGBELoader.js')
-    .then(({ RGBELoader }) => new RGBELoader().loadAsync(assetUrl(SKY_FILES.hdr)))
-    .then((t) => { hdr = t; }).catch(() => {}));
+  jobs.push(new RGBELoader().loadAsync(assetUrl(SKY_FILES.hdr)).then((t) => { hdr = t; }).catch(() => {}));
   let done = 0;
   jobs.forEach((j) => j.then(() => onProgress && onProgress(++done / jobs.length)));
   await Promise.all(jobs);
