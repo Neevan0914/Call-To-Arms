@@ -15,19 +15,22 @@ import { Story } from './story.js';
 import { Player } from '../chars/player.js';
 import { Soldier } from '../chars/soldier.js';
 import { nextFrame, clamp } from '../core/utils.js';
-import { loadAssets } from '../core/assets.js';
+import { loadAssets, loadTextures } from '../core/assets.js';
 import { Humanoid, UNIFORMS } from '../chars/humanoid.js';
 import { buildSoldierTemplate, materialFor } from '../chars/modelrig.js';
 import { setWeaponAssets } from '../chars/weapons.js';
 
 // Which soldier model / tint / headgear each uniform uses.
+// Helmet tints per faction (multiplied into the helmet's paint).
+const HELMET_TINT = { flared: [0.62, 0.68, 0.74], crested: [0.6, 0.63, 0.46], deep: [0.85, 0.9, 0.75], brodie: [0.85, 0.9, 0.75] };
+
 const MODEL_MAP = {
   player: { model: 'rifleman', tint: 'velmora', helmet: false },
   velmora: { model: 'rifleman', tint: 'velmora', helmet: true },
-  velmoraOfficer: { model: 'gunner', tint: 'officer', helmet: false },
+  velmoraOfficer: { model: 'gunner', tint: 'officer', helmet: false, helmetAsset: 'crested' },
   velmoraQM: { model: 'rifleman', tint: 'velmora', helmet: false },
-  kharzan: { model: 'gunner', tint: 'kharzan', helmet: false },
-  kharzanCoat: { model: 'gunner', tint: 'kharzanCoat', helmet: false },
+  kharzan: { model: 'gunner', tint: 'kharzan', helmet: false, helmetAsset: 'flared' },
+  kharzanCoat: { model: 'gunner', tint: 'kharzanCoat', helmet: false, helmetAsset: 'flared' },
 };
 
 const QUALITY = {
@@ -92,20 +95,25 @@ export class Game {
     const aniso = renderer.capabilities.getMaxAnisotropy();
     this.T = generateTextures(Math.min(8, aniso));
 
-    progress(0.2, 'Shaping the land…'); await nextFrame();
-    this.terrain = new Terrain(7);
-    this.scene.add(this.terrain.buildMesh(this.T));
-    this.physics = new CollisionWorld(this.terrain);
-
-    progress(0.35, 'Lighting the morning…'); await nextFrame();
-    this.atmo = new Atmosphere(this.scene, renderer, Q.shadow, this.camera);
-    SUN_UNIFORMS.uSunDir.value.copy(this.atmo.sunDir);
-
-    progress(0.4, 'Loading models…'); await nextFrame();
-    this.assets = await loadAssets((p) => progress(0.4 + p * 0.08, 'Loading models…'));
+    progress(0.12, 'Loading models…'); await nextFrame();
+    const [assets, tex] = await Promise.all([
+      loadAssets((p) => progress(0.12 + p * 0.12, 'Loading models…')),
+      loadTextures(),
+    ]);
+    this.assets = assets;
+    this.groundTex = tex.ground;
     setWeaponAssets(this.assets);
     const embedded = window.__CTA_ASSETS || {};
     this._voiceLoad = (audio) => audio.loadVoices((path) => embedded[path] || path);
+
+    progress(0.28, 'Shaping the land…'); await nextFrame();
+    this.terrain = new Terrain(7);
+    this.scene.add(this.terrain.buildMesh(this.T, tex.ground));
+    this.physics = new CollisionWorld(this.terrain);
+
+    progress(0.4, 'Lighting the morning…'); await nextFrame();
+    this.atmo = new Atmosphere(this.scene, renderer, Q.shadow, this.camera, { sky: tex.sky, hdr: tex.hdr });
+    SUN_UNIFORMS.uSunDir.value.copy(this.atmo.sunDir);
 
     progress(0.5, 'Growing the Thornwood…'); await nextFrame();
     this.vegetation = new Vegetation(this.scene, this.terrain, this.physics, this.T, this.settings.quality, this.assets, renderer, this.atmo.sunDir);
@@ -193,11 +201,32 @@ export class Game {
   }
 
   // Model options for a uniform (null -> procedural soldier).
-  modelFor(uniform) {
+  modelFor(uniform, { helmet = null } = {}) {
     const m = MODEL_MAP[uniform];
     const tpl = m && this.soldierTemplates && this.soldierTemplates[m.model];
     if (!tpl) return null;
-    return { template: tpl, showHelmet: m.helmet, matFor: (part) => materialFor(tpl, part, m.tint) };
+    const hk = helmet || m.helmetAsset;
+    const helmetAsset = hk ? this.helmetFor(hk) : null;
+    return { template: tpl, showHelmet: m.helmet && !helmetAsset, helmetAsset, matFor: (part) => materialFor(tpl, part, m.tint) };
+  }
+
+  // Tinted helmet model (cached per type).
+  helmetFor(kind) {
+    this._helmets = this._helmets || {};
+    if (kind in this._helmets) return this._helmets[kind];
+    const src = this.assets && this.assets[`helmet_${kind}`];
+    let h = null;
+    if (src) {
+      h = src.clone(true);
+      const t = HELMET_TINT[kind];
+      h.traverse((o) => {
+        if (!o.isMesh || !/paint/i.test(o.material.name)) return;
+        o.material = o.material.clone();
+        if (t) o.material.color.multiply(new THREE.Color(t[0], t[1], t[2]));
+      });
+    }
+    this._helmets[kind] = h;
+    return h;
   }
 
   // ---------- actors ----------

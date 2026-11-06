@@ -14,17 +14,65 @@ export const ASSET_FILES = {
   gunnerLod: 'assets/characters/soldier_gunner_lod1.glb',
   rifle: 'assets/weapons/rifle.glb',
   lmg: 'assets/weapons/lmg_wz28.glb',
+  sabre: 'assets/weapons/sabre.glb',
+  scabbard: 'assets/weapons/sabre_scabbard.glb',
+  helmet_brodie: 'assets/characters/helmet_brodie.glb',
+  helmet_crested: 'assets/characters/helmet_crested.glb',
+  helmet_deep: 'assets/characters/helmet_deep.glb',
+  helmet_flared: 'assets/characters/helmet_flared.glb',
+  bush_hazel: 'assets/nature/bush_hazel.glb',
+  bush_berry: 'assets/nature/bush_berry.glb',
+  fern_clump: 'assets/nature/fern_clump.glb',
+  fern_small: 'assets/nature/fern_small.glb',
+  rock_boulder: 'assets/nature/rock_boulder.glb',
+  rock_slab: 'assets/nature/rock_slab.glb',
+  rock_cluster: 'assets/nature/rock_cluster.glb',
 };
+
+// Ground texture sets (albedo + OpenGL normal map, ~1 m per tile) and the sky panorama.
+export const TEXTURE_SETS = ['grass', 'dirt', 'forest_floor', 'rock', 'moss', 'gravel'];
+export const SKY_FILES = { ldr: 'assets/sky/sky_morning.jpg', hdr: 'assets/sky/sky_morning_1k.hdr' };
+
+export function assetUrl(path) {
+  const embedded = (typeof window !== 'undefined' && window.__CTA_ASSETS) || null;
+  return embedded && embedded[path] ? embedded[path] : path;
+}
+
+export async function loadTextures(onProgress) {
+  const loader = new THREE.TextureLoader();
+  const out = {};
+  const jobs = [];
+  for (const n of TEXTURE_SETS) {
+    for (const k of ['albedo', 'normal']) {
+      jobs.push(loader.loadAsync(assetUrl(`assets/textures/${n}_${k}.jpg`)).then((t) => {
+        t.wrapS = t.wrapT = THREE.RepeatWrapping;
+        t.colorSpace = k === 'albedo' ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+        t.anisotropy = 8;
+        (out[n] = out[n] || {})[k] = t;
+      }).catch(() => {}));
+    }
+  }
+  let sky = null;
+  jobs.push(loader.loadAsync(assetUrl(SKY_FILES.ldr)).then((t) => { sky = t; }).catch(() => {}));
+  let hdr = null;
+  jobs.push(import('three/addons/loaders/RGBELoader.js')
+    .then(({ RGBELoader }) => new RGBELoader().loadAsync(assetUrl(SKY_FILES.hdr)))
+    .then((t) => { hdr = t; }).catch(() => {}));
+  let done = 0;
+  jobs.forEach((j) => j.then(() => onProgress && onProgress(++done / jobs.length)));
+  await Promise.all(jobs);
+  const complete = Object.values(out).filter((s) => s.albedo && s.normal).length;
+  return { ground: complete === TEXTURE_SETS.length ? out : null, sky, hdr };
+}
 
 export async function loadAssets(onProgress) {
   const loader = new GLTFLoader();
-  const embedded = (typeof window !== 'undefined' && window.__CTA_ASSETS) || null;
   const out = {};
   const keys = Object.keys(ASSET_FILES);
   let done = 0;
   await Promise.all(keys.map(async (k) => {
     const path = ASSET_FILES[k];
-    const url = embedded && embedded[path] ? embedded[path] : path;
+    const url = assetUrl(path);
     try {
       const gltf = await loader.loadAsync(url);
       out[k] = gltf.scene;

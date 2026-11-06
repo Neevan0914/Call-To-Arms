@@ -199,7 +199,7 @@ export class Story {
   spawnAlly(pos, o = {}) {
     const s = this.g.spawnSoldier({
       faction: 'velmora', uniform: o.uniform || 'velmora', weapon: o.weapon ?? 'rifle', pos, yaw: o.yaw ?? 0, role: o.role || 'idle',
-      accuracy: 0.24, damage: 34, hp: o.hp ?? 100, name: o.name || 'Velmoran Soldier', platformY: o.platformY ?? null, skin: o.skin,
+      accuracy: 0.24, damage: 34, hp: o.hp ?? 100, name: o.name || 'Velmoran Soldier', platformY: o.platformY ?? null, skin: o.skin, helmet: o.helmet,
     });
     this.allies.push(s);
     return s;
@@ -269,19 +269,19 @@ export class Story {
     this.captain.lookAt = S.gateInside;
     this.qm = this.spawnAlly(S.quartermaster.clone(), { uniform: 'velmoraQM', weapon: 'none', name: 'Quartermaster Dell', yaw: 0, skin: 0xb88660 });
     this.qm.lookAt = S.welcome;
-    this.sergeant = this.spawnAlly(this.ground(S.captain.x - 2.5, S.captain.z - 1.5), { name: 'Sergeant Brannoc', yaw: 0.3, skin: 0xc8946c });
+    this.sergeant = this.spawnAlly(this.ground(S.captain.x - 2.5, S.captain.z - 1.5), { name: 'Sergeant Brannoc', yaw: 0.3, skin: 0xc8946c, helmet: 'deep' });
     this.sergeant.lookAt = S.gateInside;
     // sentries on the gate & south towers
     this.sentries = [];
     for (const sx of [-2.4, 2.4]) {
       const pos = V(f.gateTop.x + sx, f.gateTop.y, f.gateTop.z + 0.3);
-      const s = this.spawnAlly(pos, { name: 'Sentry', platformY: f.gateTop.y - 0.02, yaw: 0, role: 'idle' });
+      const s = this.spawnAlly(pos, { name: 'Sentry', helmet: 'brodie', platformY: f.gateTop.y - 0.02, yaw: 0, role: 'idle' });
       s.faceYaw = 0;
       this.sentries.push(s);
     }
     for (const i of [1, 3]) {
       const t = f.towerTops[i];
-      const s = this.spawnAlly(V(t.x, t.y, t.z + 1.2), { name: 'Sentry', platformY: t.y - 0.1, yaw: 0, role: 'idle' });
+      const s = this.spawnAlly(V(t.x, t.y, t.z + 1.2), { name: 'Sentry', helmet: 'brodie', platformY: t.y - 0.1, yaw: 0, role: 'idle' });
       s.faceYaw = 0.2 * (i === 1 ? -1 : 1);
       this.sentries.push(s);
     }

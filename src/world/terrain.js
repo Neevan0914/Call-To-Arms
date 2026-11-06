@@ -16,6 +16,67 @@ const PATH_CTRL = [
   [35, -298], [35, -322],
 ];
 
+// Terrain shading with the asset pack's PBR ground sets (albedo + normal maps, ~1 m tiles):
+// grass / forest floor (+ moss) / rock / dirt road, blended by the splat weights, with
+// two-scale anti-tiling and world-aligned normal mapping.
+function groundShader(G, T) {
+  return (sh) => {
+    const u = {
+      gA: G.grass.albedo, gN: G.grass.normal, fA: G.forest_floor.albedo, fN: G.forest_floor.normal,
+      dA: G.dirt.albedo, dN: G.dirt.normal, rA: G.rock.albedo, rN: G.rock.normal, mA: G.moss.albedo, mN: G.moss.normal,
+      tMacro: T.macro,
+    };
+    for (const k in u) sh.uniforms[k] = { value: u[k] };
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute vec3 aSplat;\nvarying vec3 vSplat;\nvarying vec2 vWXZ;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSplat = aSplat;\nvWXZ = position.xz;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', `#include <common>
+        uniform sampler2D gA, gN, fA, fN, dA, dN, rA, rN, mA, mN, tMacro;
+        varying vec3 vSplat;
+        varying vec2 vWXZ;
+        vec3 nrm(sampler2D t, vec2 uv) { return texture2D(t, uv).xyz * 2.0 - 1.0; }`)
+      .replace('#include <map_fragment>', `
+        vec2 uvA = vWXZ * 0.7;
+        vec2 uvB = vWXZ * 0.173 + 0.37;
+        const float wB = 0.35;
+        vec3 mac = texture2D(tMacro, vWXZ * 0.0035).rgb;
+        float mac2 = texture2D(tMacro, vWXZ * 0.027).g;
+        vec3 cg = mix(texture2D(gA, uvA).rgb, texture2D(gA, uvB).rgb, wB) * mix(0.82, 1.15, mac2);
+        cg = mix(cg, cg * vec3(1.12, 1.04, 0.72), smoothstep(0.58, 0.82, mac.b));
+        vec3 cf = mix(texture2D(fA, uvA * 0.8).rgb, texture2D(fA, uvB).rgb, wB);
+        cf = mix(cf, vec3(dot(cf, vec3(0.3, 0.59, 0.11))), 0.4) * vec3(0.8, 0.72, 0.6);
+        vec3 cm = texture2D(mA, uvA * 0.6).rgb;
+        float mossW = smoothstep(0.45, 0.75, mac.g) * 0.65;
+        cf = mix(cf, cm, mossW);
+        vec3 cd = mix(texture2D(dA, uvA * 0.6).rgb, texture2D(dA, uvB).rgb, wB);
+        vec3 cr = mix(texture2D(rA, uvA * 0.3).rgb, cm, 0.3 * smoothstep(0.5, 0.8, mac.b));
+        float wf = clamp(vSplat.y + (mac.r - 0.5) * 0.4, 0.0, 1.0);
+        float wr = vSplat.z;
+        float wd = smoothstep(0.0, 1.0, vSplat.x + (mac2 - 0.5) * 0.25);
+        vec3 col = mix(mix(mix(cg, cf, wf), cr, wr), cd, wd);
+        col *= mix(0.85, 1.1, mac.r);
+        diffuseColor.rgb *= col;
+      `)
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+        {
+          vec3 nG = mix(nrm(gN, uvA), nrm(gN, uvB), wB);
+          vec3 nF = mix(nrm(fN, uvA * 0.8), nrm(mN, uvA * 0.6), mossW);
+          vec3 nT = mix(mix(mix(nG, nF, wf), nrm(rN, uvA * 0.3), wr), nrm(dN, uvA * 0.6), wd);
+          nT = normalize(vec3(nT.xy * 0.9, nT.z));
+          // world-aligned tangent frame (u = +x, v = +z) in view space
+          vec3 Nn = normal;
+          vec3 Tv = normalize(mat3(viewMatrix) * vec3(1.0, 0.0, 0.0));
+          vec3 Bv = normalize(mat3(viewMatrix) * vec3(0.0, 0.0, 1.0));
+          Tv = normalize(Tv - Nn * dot(Nn, Tv));
+          Bv = normalize(Bv - Nn * dot(Nn, Bv) - Tv * dot(Tv, Bv));
+          normal = normalize(Tv * nT.x + Bv * nT.y + Nn * nT.z);
+        }
+      `)
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(0.95, 0.85, vSplat.z);');
+  };
+}
+
 export class Terrain {
   constructor(seed = 7) {
     this.noise = new Simplex2(seed);
@@ -192,7 +253,7 @@ export class Terrain {
     return out.normalize();
   }
 
-  buildMesh(T) {
+  buildMesh(T, ground = null) {
     const n = this.n;
     const pos = new Float32Array(n * n * 3);
     const uv = new Float32Array(n * n * 2);
@@ -248,6 +309,7 @@ export class Terrain {
         `)
         .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(0.97, 0.88, vSplat.z);');
     };
+    if (ground) mat.onBeforeCompile = groundShader(ground, T);
     const mesh = new THREE.Mesh(g, mat);
     mesh.receiveShadow = true;
     mesh.name = 'terrain';

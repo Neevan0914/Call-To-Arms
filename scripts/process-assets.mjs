@@ -12,7 +12,7 @@ import { mkdirSync, statSync, existsSync } from 'node:fs';
 await MeshoptSimplifier.ready;
 const io = new NodeIO();
 const SRC = 'assets-src', OUT = 'public/assets';
-for (const d of ['characters', 'nature', 'weapons']) mkdirSync(`${OUT}/${d}`, { recursive: true });
+for (const d of ['characters', 'nature', 'weapons', 'props']) mkdirSync(`${OUT}/${d}`, { recursive: true });
 
 function rng(seed) { return () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }; }
 
@@ -153,6 +153,55 @@ if (run('weapons')) {
   if (existsSync(`${SRC}/rifle.glb`)) await simple('rifle', 'weapons', 0.16, 0.0004);
   if (existsSync(`${SRC}/lmg_wz28.glb`)) await simple('lmg_wz28', 'weapons', 0.16, 0.0004);
 }
+// Generic single-LOD prop: per-material rules { match: RegExp, keep, grow, simplify, error }
+async function prop(srcName, outPath, rules) {
+  const doc = await io.read(`${SRC}/${srcName}.glb`);
+  await doc.transform(weld());
+  const parts = [];
+  for (const mesh of doc.getRoot().listMeshes()) {
+    for (const prim of mesh.listPrimitives()) {
+      const name = prim.getMaterial()?.getName() || mesh.getName();
+      const r = rules.find((x) => x.match.test(name)) || rules[rules.length - 1];
+      if (r.simplify < 1) simplifyPrim(prim, r.simplify, r.error ?? 0.01);
+      if (r.keep < 1) thinClusters(prim, r.keep, r.grow ?? 1, 99);
+      parts.push(`${name}:${prim.getIndices().getCount() / 3}`);
+    }
+  }
+  await doc.transform(prune(), dedup());
+  repairNormals(doc);
+  await io.write(outPath, doc);
+  console.log(`${outPath}  tris=${triCount(doc)}  ${(statSync(outPath).size / 1e6).toFixed(2)}MB  [${parts.join(' ')}]`);
+}
+
+if (run('expansion') && existsSync(`${SRC}/expansion`)) {
+  const X = (n) => `expansion/${n}`;
+  const any = /./;
+  await prop(X('sabre'), `${OUT}/weapons/sabre.glb`, [{ match: any, keep: 1, simplify: 0.12, error: 0.002 }]);
+  await prop(X('sabre_scabbard'), `${OUT}/weapons/sabre_scabbard.glb`, [{ match: any, keep: 1, simplify: 0.22, error: 0.0005 }]);
+  for (const h of ['brodie', 'crested', 'deep', 'flared']) {
+    await prop(X(`helmet_${h}`), `${OUT}/characters/helmet_${h}.glb`, [{ match: any, keep: 1, simplify: 0.1, error: 0.004 }]);
+  }
+  for (const b of ['bush_hazel', 'bush_berry']) {
+    await prop(X(b), `${OUT}/nature/${b}.glb`, [
+      { match: /leaf/i, keep: 0.12, grow: 1.35, simplify: 0.22, error: 0.08 },
+      { match: /berry/i, keep: 0.08, grow: 1.4, simplify: 0.1, error: 0.08 },
+      { match: any, keep: 1, simplify: 0.04, error: 0.05 },
+    ]);
+  }
+  for (const f of ['fern_clump', 'fern_small']) {
+    await prop(X(f), `${OUT}/nature/${f}.glb`, [
+      { match: /fern_/i, keep: 0.6, grow: 1.1, simplify: 0.06, error: 0.08 },
+      { match: any, keep: 1, simplify: 0.08, error: 0.06 },
+    ]);
+  }
+  for (const [r, k] of [['rock_boulder', 0.025], ['rock_slab', 0.03], ['rock_cluster', 0.015]]) {
+    await prop(X(r), `${OUT}/nature/${r}.glb`, [
+      { match: /moss/i, keep: 1, simplify: 0.12, error: 0.02 },
+      { match: any, keep: 1, simplify: k, error: 0.01 },
+    ]);
+  }
+}
+
 if (run('trees')) {
   // keep: fraction of foliage clusters kept; grow: survivor scale-up; bark: decimation ratio
   // lod0 = near (<~35 m), lod1 = mid (<~75 m). Distant trees use billboard impostors baked at runtime.

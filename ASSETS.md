@@ -1,11 +1,12 @@
 # Asset checklist (what to send for the realism upgrade)
 
-**Already in the game:** `soldier_rifleman`, `soldier_gunner`, `rifle`, `lmg_wz28`,
-`tree_pine`, `tree_birch`, `tree_oak`. The soldiers have no skeleton, so the game rigs them
-automatically. Rigged models with real animations would still look better in motion.
+**Already in the game:** soldiers (rifleman, gunner), rifle, Rkm M28, sabre and scabbard,
+four helmets (flared for the Kharzan, crested for the captain, deep for the sergeant, brodie for
+the sentries), pine, birch, oak, two bushes, two ferns, three rocks, six PBR ground sets and the
+sky (rendered as a golden-hour "morning" variant to match the game's sun).
 
-**Most useful next:** a sabre, an officer and a Kharzan helmet, bushes/ferns/rocks, ground
-textures and a sky HDRI.
+**Still welcome:** rigged soldiers with real animations (the game rigs the static ones itself),
+an officer's peaked cap, crates, barrels, sandbags and fort buildings.
 
 The game runs today on procedural stand-ins, so nothing below is required.
 Each asset you send replaces one stand-in. Put the files in `public/assets/`,

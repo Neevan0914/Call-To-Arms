@@ -2,10 +2,27 @@ import * as THREE from 'three';
 import { Sky } from 'three/addons/objects/Sky.js';
 import { CSM } from 'three/addons/csm/CSM.js';
 
+// Average colour of the panorama just above the horizon, looking away from the sun
+// (where most of the fogged distance is seen), in linear space.
+function horizonColor(img, sunDir, rotY) {
+  try {
+    const w = 256, h = 128;
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    const row = ctx.getImageData(0, Math.floor(h * 0.47), w, 3).data;
+    let r = 0, g = 0, b = 0, n = 0;
+    for (let i = 0; i < row.length; i += 4) { r += row[i]; g += row[i + 1]; b += row[i + 2]; n++; }
+    return new THREE.Color().setRGB(r / n / 255, g / n / 255, b / n / 255, THREE.SRGBColorSpace).multiplyScalar(1.1);
+  } catch (e) {
+    return new THREE.Color(0x9fb0b4);
+  }
+}
+
 // Golden early-morning atmosphere: physical sky, IBL from the sky, warm sun with
 // a texel-snapped shadow frustum that follows the focus point, and haze.
 export class Atmosphere {
-  constructor(scene, renderer, quality, camera) {
+  constructor(scene, renderer, quality, camera, { sky: skyTex = null, hdr = null } = {}) {
     this.scene = scene;
     this.camera = camera;
     const elevation = 17, azimuth = 128;
@@ -13,27 +30,47 @@ export class Atmosphere {
     const theta = THREE.MathUtils.degToRad(azimuth);
     this.sunDir = new THREE.Vector3().setFromSphericalCoords(1, phi, theta);
 
-    const sky = new Sky();
-    sky.scale.setScalar(900);
-    const u = sky.material.uniforms;
-    u.turbidity.value = 3.2;
-    u.rayleigh.value = 2.2;
-    u.mieCoefficient.value = 0.004;
-    u.mieDirectionalG.value = 0.86;
-    u.sunPosition.value.copy(this.sunDir);
-    this.sky = sky;
-    scene.add(sky);
-
-    // Environment lighting from the sky
     const pmrem = new THREE.PMREMGenerator(renderer);
-    const envScene = new THREE.Scene();
-    const sky2 = new Sky();
-    sky2.scale.setScalar(900);
-    for (const k of Object.keys(u)) sky2.material.uniforms[k].value = u[k].value;
-    envScene.add(sky2);
-    const rt = pmrem.fromScene(envScene, 0, 0.1, 1000);
-    scene.environment = rt.texture;
-    scene.environmentIntensity = 0.42;
+    this.fogColor = new THREE.Color(0x9fb0b4);
+    if (skyTex) {
+      // Painted panorama (asset pack). Rotate it so its sun (+X in the image) sits at our sun.
+      skyTex.mapping = THREE.EquirectangularReflectionMapping;
+      skyTex.colorSpace = THREE.SRGBColorSpace;
+      scene.background = skyTex;
+      scene.backgroundIntensity = 1.2;
+      const rotY = -Math.atan2(this.sunDir.z, this.sunDir.x);
+      scene.backgroundRotation.set(0, rotY, 0);
+      scene.environmentRotation.set(0, rotY, 0);
+      this.fogColor.copy(horizonColor(skyTex.image, this.sunDir, rotY));
+      if (hdr) {
+        hdr.mapping = THREE.EquirectangularReflectionMapping;
+        scene.environment = pmrem.fromEquirectangular(hdr).texture;
+        scene.environmentIntensity = 0.62;
+      } else {
+        scene.environment = pmrem.fromEquirectangular(skyTex).texture;
+        scene.environmentIntensity = 0.5;
+      }
+      this.sky = null;
+    } else {
+      const sky = new Sky();
+      sky.scale.setScalar(900);
+      const u = sky.material.uniforms;
+      u.turbidity.value = 3.2;
+      u.rayleigh.value = 2.2;
+      u.mieCoefficient.value = 0.004;
+      u.mieDirectionalG.value = 0.86;
+      u.sunPosition.value.copy(this.sunDir);
+      this.sky = sky;
+      scene.add(sky);
+      // Environment lighting from the sky
+      const envScene = new THREE.Scene();
+      const sky2 = new Sky();
+      sky2.scale.setScalar(900);
+      for (const k of Object.keys(u)) sky2.material.uniforms[k].value = u[k].value;
+      envScene.add(sky2);
+      scene.environment = pmrem.fromScene(envScene, 0, 0.1, 1000).texture;
+      scene.environmentIntensity = 0.42;
+    }
     pmrem.dispose();
 
     this.sun = new THREE.DirectionalLight(0xffd6a6, 3.4);
@@ -68,10 +105,9 @@ export class Atmosphere {
       scene.add(this.sun.target);
     }
 
-    this.hemi = new THREE.HemisphereLight(0xb9d0e6, 0x4a3b26, 0.55);
+    this.hemi = new THREE.HemisphereLight(0xb9d0e6, 0x4a3b26, skyTex ? 0.75 : 0.55);
     scene.add(this.hemi);
 
-    this.fogColor = new THREE.Color(0x9fb0b4);
     scene.fog = new THREE.FogExp2(this.fogColor, 0.0048);
 
     // light-space basis for texel snapping
@@ -111,7 +147,7 @@ export class Atmosphere {
   }
 
   update(camera, focus) {
-    this.sky.position.copy(camera.position);
+    if (this.sky) this.sky.position.copy(camera.position);
     if (this.csm) {
       if (camera.fov !== this._fov || camera.aspect !== this._aspect) {
         this._fov = camera.fov; this._aspect = camera.aspect;

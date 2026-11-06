@@ -89,8 +89,8 @@ the pause menu (**Esc**) if the frame rate drops.
 
 ## 3D assets
 
-The game now uses real models for the soldiers, the rifle, the Rkm M28 and the forest
-(pine, birch, oak). The high-poly source files live in `assets-src/`, which is git-ignored
+The game now uses real models for the soldiers, rifle, Rkm M28, sabre and scabbard, helmets,
+the forest (pine, birch, oak, bushes, ferns, rocks), PBR ground textures and a painted sky panorama. The high-poly source files live in `assets-src/`, which is git-ignored
 because it's large. To rebuild the game-ready versions in `public/assets/`, run:
 
 ```bash

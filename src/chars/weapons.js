@@ -72,8 +72,8 @@ const box = (x, y, z) => new THREE.BoxGeometry(x, y, z);
 
 // Optional glTF weapon models (stock at origin, barrel along +X). When present they
 // replace the procedural rifles; grip points were measured on the models.
-const ASSETS = { rifle: null, lmg: null };
-export function setWeaponAssets(a) { ASSETS.rifle = a.rifle || null; ASSETS.lmg = a.lmg || null; }
+const ASSETS = { rifle: null, lmg: null, sabre: null, scabbard: null };
+export function setWeaponAssets(a) { for (const k of Object.keys(ASSETS)) ASSETS[k] = a[k] || null; }
 
 function fromAsset(src) {
   const g = new THREE.Group();
@@ -188,6 +188,12 @@ export function buildLMG(T) {
 }
 
 export function buildSword(T) {
+  if (ASSETS.sabre) {
+    // asset frame: blade along +X, edge down (-Y), guard at the origin, grip along -X
+    const g = fromAsset(ASSETS.sabre);
+    g.userData = { gripR: new THREE.Vector3(0, -0.005, -0.075), tip: new THREE.Vector3(0, 0.03, 0.83), type: 'sword' };
+    return g;
+  }
   const M = weaponMaterials(T);
   const P = new Parts();
   // curved blade: X = length, Y = width; back on +y, edge on -y
@@ -210,6 +216,7 @@ export function buildSword(T) {
 }
 
 export function buildScabbard(T) {
+  if (ASSETS.scabbard) return fromAsset(ASSETS.scabbard); // same frame as the sabre: it slides straight in
   const M = weaponMaterials(T);
   const P = new Parts();
   const L = 0.86, pts = [];

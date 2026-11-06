@@ -3,6 +3,7 @@ import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometr
 import { mulberry32, Simplex2 } from '../core/noise.js';
 import { WORLD_SIZE, SEG, FORT, SPAWN, BOUND } from './terrain.js';
 import { TreeSystem, SPECIES } from './trees.js';
+import { bakedMeshes } from '../core/assets.js';
 
 const TILE = 100;
 
@@ -359,6 +360,26 @@ export class Vegetation {
     stumpGeo.translate(0, 0.3, 0);
 
     const density = quality === 'low' ? 0.6 : quality === 'medium' ? 0.8 : 1;
+    // Undergrowth models from the asset pack: { kind: [variant parts...] } (null -> procedural)
+    const propModels = {};
+    const FOLIAGE = /leaf|fern_/i;
+    const prepProp = (keys, windH) => {
+      const vars = keys.filter((k) => assets[k]).map((k) => bakedMeshes(assets[k]));
+      if (!vars.length) return null;
+      for (const parts of vars) for (const p of parts) {
+        if (FOLIAGE.test(p.material.name) && !p.material.userData.windy) {
+          p.material.userData.windy = true;
+          p.material.side = THREE.DoubleSide;
+          windify(p.material, this.uniforms, windH > 1.5 ? 0.03 : 0.06, windH, 0.6);
+        }
+      }
+      return vars;
+    };
+    propModels.bush = prepProp(['bush_hazel', 'bush_berry'], 2.3);
+    propModels.fern = prepProp(['fern_clump', 'fern_small'], 0.9);
+    propModels.rock = prepProp(['rock_boulder', 'rock_slab', 'rock_cluster'], 0);
+    // scale from the procedural stand-in's size to the model's
+    const PROP_SCALE = { bush: 0.45, fern: 0.62, rock: 0.8 };
     const useModels = !!(assets.pine || assets.birch || assets.oak) && renderer;
     const treeList = [];
     // Placement on a jittered grid; dense in the playable corridor.
@@ -415,8 +436,8 @@ export class Vegetation {
           else b.stump.push({ m: mat(x, y - 0.05, z, rnd() * 6.28, 0.7 + rnd() * 0.6), c: 1 });
         }
         // ferns / bushes in the forest understory
-        if (corridor && f > 0.25 && pq.d > 3 && rnd() < 0.75 * density) {
-          for (let k = 0; k < 2; k++) {
+        if (corridor && f > 0.25 && pq.d > 3 && rnd() < (propModels.fern ? 0.5 : 0.75) * density) {
+          for (let k = 0; k < (propModels.fern ? 1 : 2); k++) {
             const fx = x + (rnd() - 0.5) * step, fz = z + (rnd() - 0.5) * step;
             b.fern.push({ m: mat(fx, terrain.getHeight(fx, fz) - 0.05, fz, rnd() * 6.28, 0.7 + rnd() * 0.8), c: 0.75 + rnd() * 0.5 });
           }
@@ -483,12 +504,26 @@ export class Vegetation {
         make(pineFar.trunk, barkMat, b.pine, true), make(pineFar.foliage, pineMat, b.pine, true),
         make(oakFar.trunk, barkMat, b.oak, true), make(oakFar.foliage, leafMat, b.oak, true),
       ].filter(Boolean);
+      // instanced model props: split a tile's list between variants, one InstancedMesh per part
+      const variants = (kind, list, cast) => {
+        const vars = propModels[kind];
+        if (!vars) return null;
+        const out = [];
+        const sc = new THREE.Vector3().setScalar(PROP_SCALE[kind]);
+        vars.forEach((parts, vi) => {
+          const sub = list.filter((it, i) => (Math.floor(it.m.elements[12] * 7.31 + it.m.elements[14] * 3.17) % vars.length + vars.length) % vars.length === vi)
+            .map((it) => ({ ...it, m: it.m.clone().scale(sc) }));
+          for (const p of parts) out.push(make(p.geometry, p.material, sub, cast));
+        });
+        return out;
+      };
       const mid = [
-        make(bush, bushMat, b.bush, true), make(rock, rockMat, b.rock, true),
+        ...(variants('bush', b.bush, true) || [make(bush, bushMat, b.bush, true)]),
+        ...(variants('rock', b.rock, true) || [make(rock, rockMat, b.rock, true)]),
         make(logGeo, barkMat, b.log, true), make(stumpGeo, barkMat, b.stump, true),
       ].filter(Boolean);
       const detail = [
-        make(fern, fernMat, b.fern, false), make(twig, barkMat, b.twig, true), make(mush, plainMat, b.mush, false),
+        ...(variants('fern', b.fern, false) || [make(fern, fernMat, b.fern, false)]), make(twig, barkMat, b.twig, true), make(mush, plainMat, b.mush, false),
         make(flower, flowerMat, b.flower, false), make(pebble, rockMat, b.pebble, false),
       ].filter(Boolean);
       [...near, ...far, ...mid, ...detail].forEach((m) => group.add(m));

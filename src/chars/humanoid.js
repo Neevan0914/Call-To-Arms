@@ -160,7 +160,8 @@ export class Humanoid {
       add(HG, Cyl(0.113, 0.11, 0.035, 18, true), 0xd8cfb8, [0, 0.045, -0.004], [-0.22, 0, 0.12], [0.97, 1, 1.04]);
       add(HG, S(0.02, 6, 4), 0x7a2a20, [0.045, 0.06, 0.095], [0, 0, 0], [1.3, 0.8, 0.4]);
     }
-    if (c.helmet === 'kharzan') {
+    const assetHelmet = !!(M && M.helmetAsset);
+    if (c.helmet === 'kharzan' && !assetHelmet) {
       const prof = [[0.0, 0.135], [0.05, 0.131], [0.09, 0.112], [0.118, 0.072], [0.129, 0.025], [0.132, -0.01], [0.148, -0.045], [0.163, -0.07], [0.166, -0.077]].map((p) => new THREE.Vector2(p[0], p[1]));
       add(HG, new THREE.LatheGeometry(prof, 20), c.helmetColor, [0, 0.055, -0.012], [0, 0, 0], [1, 1, 1.06], 'metal');
       add(HG, Box(0.012, 0.022, 0.17), dark(new THREE.Color(c.helmetColor), 0.9), [0, 0.19, -0.012], [0, 0, 0], [1, 1, 1], 'metal');
@@ -172,7 +173,7 @@ export class Humanoid {
       add(HG, Box(0.022, 0.03, 0.2), dark(new THREE.Color(c.helmetColor), 0.92), [0, 0.18, -0.006], [0.06, 0, 0], [1, 1, 1], 'metal');
       add(HG, Box(0.03, 0.03, 0.006), c.brass, [0, 0.1, 0.118], [0.3, 0, 0], [1, 1, 1], 'metal');
       add(HG, Box(0.01, 0.07, 0.008), 0x3a2618, [0.075, -0.04, 0.065], [0.0, 0, 0.3], [1, 1, 1]);
-    } else if (c.helmet === 'cap') {
+    } else if (c.helmet === 'cap' && !assetHelmet) {
       add(HG, Cyl(0.132, 0.112, 0.06, 18), c.capColor, [0, 0.105, -0.006], [-0.08, 0, 0], [1.08, 1, 1.15]);
       add(HG, Cyl(0.113, 0.113, 0.035, 18), c.band, [0, 0.07, 0.0], [-0.08, 0, 0], [1, 1, 1.05]);
       add(HG, new THREE.CylinderGeometry(0.115, 0.115, 0.008, 16, 1, false, -Math.PI / 2, Math.PI), 0x111111, [0, 0.055, 0.02], [0.32, 0, 0], [1, 1, 0.75], 'metal');
@@ -294,6 +295,15 @@ export class Humanoid {
       }));
     this.lod = 0;
     this.meshes.push(...this.lodMeshes.flat());
+    if (model.helmetAsset) {
+      // asset helmets: origin = centre of the liner band (where the head goes), +Z front
+      const hm = model.helmetAsset.clone(true);
+      hm.position.set(0, 0.052, -0.012);
+      hm.rotation.x = -0.06;
+      hm.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      this.head.add(hm);
+      this.helmetMesh = hm;
+    }
   }
 
   setLod(i) {
