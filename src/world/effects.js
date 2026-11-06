@@ -180,28 +180,42 @@ export class Effects {
     this.motesAlpha = 0.35;
     this._v = new THREE.Vector3();
 
-    // sabre trail: a ribbon between recent (base, tip) samples of the blade
+    // sabre trail: a smooth ribbon swept by the blade. Raw per-frame samples are
+    // resampled with a spline (blade root) and a normalised spline of the blade
+    // direction, so fast twirls come out as round arcs instead of straight chords.
     {
-      const N = this.swN = 40;
+      const RAW = this.swRaw = 28, SUB = this.swSub = 10;
+      const N = this.swN = (RAW - 1) * SUB + 1;
       const geo = new THREE.BufferGeometry();
       this.swPos = new Float32Array(N * 2 * 3);
       this.swAlpha = new Float32Array(N * 2);
+      const edge = new Float32Array(N * 2);
+      for (let i = 0; i < N; i++) edge[i * 2 + 1] = 1;
       geo.setAttribute('position', new THREE.BufferAttribute(this.swPos, 3).setUsage(THREE.DynamicDrawUsage));
       geo.setAttribute('aA', new THREE.BufferAttribute(this.swAlpha, 1).setUsage(THREE.DynamicDrawUsage));
+      geo.setAttribute('aEdge', new THREE.BufferAttribute(edge, 1));
       const idx = [];
-      for (let i = 0; i < N - 1; i++) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+      for (let i = 0; i < N - 1; i++) { const q = i * 2; idx.push(q, q + 1, q + 2, q + 1, q + 3, q + 2); }
       geo.setIndex(idx);
       const mat = new THREE.ShaderMaterial({
         transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
-        uniforms: { uCol: { value: new THREE.Color(1.6, 1.75, 2.0) } },
-        vertexShader: 'attribute float aA; varying float vA; varying float vEdge; void main(){ vA = aA; vEdge = float(gl_VertexID % 2); gl_Position = projectionMatrix * viewMatrix * vec4(position,1.0); }',
-        fragmentShader: 'uniform vec3 uCol; varying float vA; varying float vEdge; void main(){ float e = smoothstep(0.0, 0.85, vEdge); gl_FragColor = vec4(uCol * vA * e * e, 1.0); }',
+        uniforms: { uCol: { value: new THREE.Color(1.25, 1.4, 1.65) } },
+        vertexShader: 'attribute float aA; attribute float aEdge; varying float vA; varying float vEdge; void main(){ vA = aA; vEdge = aEdge; gl_Position = projectionMatrix * viewMatrix * vec4(position,1.0); }',
+        fragmentShader: `uniform vec3 uCol; varying float vA; varying float vEdge;
+          void main(){
+            // soft haze toward the hilt, bright but feathered edge at the tip
+            float body = smoothstep(0.0, 1.0, vEdge); body *= body;
+            float rim = smoothstep(0.55, 0.93, vEdge) * (1.0 - smoothstep(0.93, 1.0, vEdge));
+            float a = vA * (body * 0.55 + rim * 0.9);
+            gl_FragColor = vec4(uCol * a, 1.0);
+          }`,
       });
       this.swMesh = new THREE.Mesh(geo, mat);
       this.swMesh.frustumCulled = false; this.swMesh.renderOrder = 4; this.swMesh.visible = false;
       scene.add(this.swMesh);
-      this.swSamples = []; // { b, t, age }
-      this.swLife = 0.16;
+      this.swSamples = []; // { b, d (blade vector), age }
+      this.swLife = 0.2;
+      this._cb = new THREE.Vector3(); this._cd = new THREE.Vector3();
     }
     // ground shock ring for slams
     {
@@ -220,42 +234,52 @@ export class Effects {
     }
   }
 
-  // Record the blade this frame (null = blade not swinging; trail just fades out).
+  // Record the blade this frame (called only while a sabre move plays; the trail fades out on its own).
   swordTrail(base, tip) {
-    if (base) {
-      const S = this.swSamples;
-      const last = S[S.length - 1];
-      // insert interpolated samples on fast frames so arcs stay round
-      if (last && last.age < 0.05) {
-        const gap = last.t.distanceTo(tip);
-        const n = Math.min(4, Math.floor(gap / 0.12));
-        for (let i = 1; i <= n; i++) {
-          const k = i / (n + 1);
-          S.push({ b: last.b.clone().lerp(base, k), t: last.t.clone().lerp(tip, k), age: 0 });
-        }
-      }
-      S.push({ b: base.clone(), t: tip.clone(), age: 0 });
-      while (S.length > this.swN) S.shift();
-    }
+    const S = this.swSamples;
+    S.push({ b: base.clone(), d: tip.clone().sub(base), age: 0 });
+    while (S.length > this.swRaw) S.shift();
   }
 
   _updateSwordTrail(dt) {
     const S = this.swSamples;
     for (const s of S) s.age += dt;
     while (S.length && S[0].age > this.swLife) S.shift();
-    if (S.length < 2) { this.swMesh.visible = false; return; }
-    const P = this.swPos, A = this.swAlpha, N = this.swN;
     const n = S.length;
-    for (let i = 0; i < N; i++) {
-      const s = S[Math.min(i, n - 1)];
-      const a = i < n ? Math.pow(1 - s.age / this.swLife, 1.6) * Math.min(1, (i + 1) / 3) : 0;
-      // trail hugs the outer 60% of the blade
-      const bx = s.b.x + (s.t.x - s.b.x) * 0.4, by = s.b.y + (s.t.y - s.b.y) * 0.4, bz = s.b.z + (s.t.z - s.b.z) * 0.4;
-      P[i * 6] = bx; P[i * 6 + 1] = by; P[i * 6 + 2] = bz;
-      P[i * 6 + 3] = s.t.x; P[i * 6 + 4] = s.t.y; P[i * 6 + 5] = s.t.z;
-      A[i * 2] = a * 0.55; A[i * 2 + 1] = a * 0.55;
+    if (n < 2) { this.swMesh.visible = false; return; }
+    const P = this.swPos, A = this.swAlpha, SUB = this.swSub;
+    const cr = (p0, p1, p2, p3, t, out) => {
+      const t2 = t * t, t3 = t2 * t;
+      return out.set(
+        0.5 * (2 * p1.x + (p2.x - p0.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (3 * p1.x - p0.x - 3 * p2.x + p3.x) * t3),
+        0.5 * (2 * p1.y + (p2.y - p0.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (3 * p1.y - p0.y - 3 * p2.y + p3.y) * t3),
+        0.5 * (2 * p1.z + (p2.z - p0.z) * t + (2 * p0.z - 5 * p1.z + 4 * p2.z - p3.z) * t2 + (3 * p1.z - p0.z - 3 * p2.z + p3.z) * t3));
+    };
+    const B = this._cb, D = this._cd;
+    const total = (n - 1) * SUB + 1;
+    let v = 0;
+    for (let i = 0; i < n - 1; i++) {
+      const s0 = S[Math.max(0, i - 1)], s1 = S[i], s2 = S[i + 1], s3 = S[Math.min(n - 1, i + 2)];
+      const steps = i === n - 2 ? SUB + 1 : SUB;
+      const l1 = s1.d.length(), l2 = s2.d.length();
+      for (let k = 0; k < steps; k++) {
+        const t = k / SUB;
+        cr(s0.b, s1.b, s2.b, s3.b, t, B);
+        cr(s0.d, s1.d, s2.d, s3.d, t, D);
+        D.setLength(l1 + (l2 - l1) * t); // keep the blade length: arcs stay round
+        const age = s1.age + (s2.age - s1.age) * t;
+        const life = 1 - age / this.swLife;
+        const head = Math.min(1, (total - 1 - v) / 6 + 0.6); // soften the newest edge slightly
+        const a = Math.max(0, life) ** 1.5 * Math.min(1, v / (SUB * 1.5)) * head;
+        // trail hugs the outer 65% of the blade
+        P[v * 6] = B.x + D.x * 0.35; P[v * 6 + 1] = B.y + D.y * 0.35; P[v * 6 + 2] = B.z + D.z * 0.35;
+        P[v * 6 + 3] = B.x + D.x; P[v * 6 + 4] = B.y + D.y; P[v * 6 + 5] = B.z + D.z;
+        A[v * 2] = a; A[v * 2 + 1] = a;
+        v++;
+      }
     }
     const g = this.swMesh.geometry;
+    g.setDrawRange(0, (v - 1) * 6);
     g.attributes.position.needsUpdate = true;
     g.attributes.aA.needsUpdate = true;
     this.swMesh.visible = true;
