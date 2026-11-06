@@ -6,6 +6,11 @@
 //   node scripts/generate-voices.mjs --list # just print the lines and their cast
 //   node scripts/generate-voices.mjs --force # re-record every line
 //
+// Acted takes (Chatterbox, see scripts/voices/chatterbox_takes.py):
+//   node scripts/generate-voices.mjs --json lines.json   # export lines + delivery directions
+//   node scripts/generate-voices.mjs --refs refs/        # clean Kokoro voice sample per character
+//   node scripts/generate-voices.mjs --from-raw raw/     # apply per-character FX to raw takes
+//
 // Lines are read from src/game/story.js (this.say / this.bark calls). Each character's
 // voice, speed and audio treatment come from src/game/voices.js. Requires ffmpeg.
 import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from 'node:fs';
@@ -15,6 +20,8 @@ import { CAST, lineId, spokenText } from '../src/game/voices.js';
 const OUT = 'public/assets/voice';
 const listOnly = process.argv.includes('--list');
 const force = process.argv.includes('--force');
+const argOf = (k) => { const i = process.argv.indexOf(k); return i >= 0 ? process.argv[i + 1] : null; };
+const jsonOut = argOf('--json'), refsDir = argOf('--refs'), rawDir = argOf('--from-raw');
 
 // ---- collect lines ----
 const src = readFileSync('src/game/story.js', 'utf8');
@@ -25,17 +32,24 @@ for (const row of src.split('\n')) {
   let m = row.match(new RegExp(`this\\.say\\(\\s*'([^']*)'\\s*,\\s*${str}`));
   if (m) {
     const v = row.match(/voice: '(\w+)'/);
+    const d = row.match(/delivery: '(\w+)'/);
     const cast = v ? v[1] : 'soldier';
-    lines.set(lineId(cast, unescape(m[3])), { speaker: m[1], text: unescape(m[3]), cast });
+    lines.set(lineId(cast, unescape(m[3])), { speaker: m[1], text: unescape(m[3]), cast, delivery: d ? d[1] : 'neutral' });
     continue;
   }
-  m = row.match(new RegExp(`this\\.bark\\(\\s*'([^']*)'\\s*,\\s*${str}\\s*,\\s*COL\\.\\w+\\s*,\\s*[\\d.]+\\s*,\\s*'(\\w+)'\\)`));
-  if (m) lines.set(lineId(m[4], unescape(m[3])), { speaker: m[1], text: unescape(m[3]), cast: m[4] });
+  m = row.match(new RegExp(`this\\.bark\\(\\s*'([^']*)'\\s*,\\s*${str}\\s*,\\s*COL\\.\\w+\\s*,\\s*[\\d.]+\\s*,\\s*'(\\w+)'(?:\\s*,\\s*'(\\w+)')?\\)`));
+  if (m) lines.set(lineId(m[4], unescape(m[3])), { speaker: m[1], text: unescape(m[3]), cast: m[4], delivery: m[5] || 'neutral' });
 }
 for (const [id, l] of lines) if (!CAST[l.cast]) throw new Error(`unknown cast "${l.cast}" for line ${id}`);
 console.log(`${lines.size} lines`);
 if (listOnly) {
-  for (const [id, l] of lines) console.log(`${id.padEnd(26)} ${l.cast.padEnd(15)} ${CAST[l.cast].kokoro.padEnd(11)} ${spokenText(l.text)}`);
+  for (const [id, l] of lines) console.log(`${id.padEnd(26)} ${l.cast.padEnd(15)} ${l.delivery.padEnd(11)} ${spokenText(l.text)}`);
+  process.exit(0);
+}
+if (jsonOut) {
+  const arr = [...lines].map(([id, l]) => ({ id, ...l, spoken: spokenText(l.text), voice: CAST[l.cast].kokoro, fx: CAST[l.cast].fx }));
+  writeFileSync(jsonOut, JSON.stringify(arr, null, 1));
+  console.log(`wrote ${jsonOut}`);
   process.exit(0);
 }
 
@@ -57,6 +71,24 @@ const FX = {
 const fxChain = (fx) => `${TRIM},${FX[fx].chain},loudnorm=I=${FX[fx].lufs}:TP=-2:LRA=8,alimiter=limit=0.8:level=false,apad=pad_dur=0.15`;
 
 // ---- synthesize ----
+const encode = (input, fx, out) => execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', input, '-af', fxChain(fx), '-ac', '1', '-ar', '24000', '-c:a', 'libmp3lame', '-b:a', '48k', out]);
+const probe = (f) => parseFloat(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f]).toString());
+if (rawDir) {
+  mkdirSync(OUT, { recursive: true });
+  const manifest = { lines: {} };
+  for (const [id, l] of lines) {
+    const raw = `${rawDir}/${id}.wav`;
+    if (!existsSync(raw)) { console.warn(`missing take: ${raw}`); continue; }
+    const file = `${id}.mp3`;
+    encode(raw, CAST[l.cast].fx, `${OUT}/${file}`);
+    const dur = probe(`${OUT}/${file}`);
+    manifest.lines[id] = { file, dur: +dur.toFixed(2), cast: l.cast, text: l.text };
+    console.log(`${file}  ${dur.toFixed(2)}s  [${l.cast}/${l.delivery}] ${l.text}`);
+  }
+  writeFileSync(`${OUT}/manifest.json`, JSON.stringify(manifest, null, 1));
+  console.log(`wrote ${OUT}/manifest.json`);
+  process.exit(0);
+}
 let KokoroTTS;
 try { ({ KokoroTTS } = await import('kokoro-js')); } catch (e) {
   console.error('kokoro-js is not installed. Run: npm i --no-save kokoro-js@1.2.1');
@@ -69,6 +101,20 @@ let tts;
 try {
   tts = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', { dtype: 'fp32', device: 'cpu' });
 } catch (e) { console.error('model load failed:', short(e)); process.exit(1); }
+if (refsDir) {
+  // ~10 s of conversational speech per character: the acting model clones the timbre from it
+  const REF = "Right, listen. I don't know how long we've got, but we hold here — all of us. Understood? Good. Now keep your heads down, and wait for my signal.";
+  mkdirSync(refsDir, { recursive: true });
+  const done = new Set();
+  for (const [name, c] of Object.entries(CAST)) {
+    if (done.has(c.kokoro)) continue;
+    done.add(c.kokoro);
+    const audio = await tts.generate(REF, { voice: c.kokoro, speed: 1.0 });
+    await audio.save(`${refsDir}/${c.kokoro}.wav`);
+    console.log(`ref ${c.kokoro}`);
+  }
+  process.exit(0);
+}
 mkdirSync(OUT, { recursive: true });
 const tmp = `${OUT}/.tmp.wav`;
 const manifest = { lines: {} };
@@ -79,9 +125,9 @@ for (const [id, l] of lines) {
   if (force || !existsSync(out)) {
     const audio = await tts.generate(spokenText(l.text), { voice: c.kokoro, speed: c.speed });
     await audio.save(tmp);
-    execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', tmp, '-af', fxChain(c.fx), '-ac', '1', '-ar', '24000', '-c:a', 'libmp3lame', '-b:a', '48k', out]);
+    encode(tmp, c.fx, out);
   }
-  const dur = parseFloat(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', out]).toString());
+  const dur = probe(out);
   manifest.lines[id] = { file, dur: +dur.toFixed(2), cast: l.cast, text: l.text };
   console.log(`${file}  ${dur.toFixed(2)}s  [${l.cast}/${c.kokoro}] ${l.text}`);
 }

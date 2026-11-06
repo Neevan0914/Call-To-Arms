@@ -2,45 +2,45 @@
  "lines": {
   "sergeant_dec5f454": {
    "file": "sergeant_dec5f454.mp3",
-   "dur": 2.18,
+   "dur": 2.47,
    "cast": "sergeant",
    "text": "The Captain's down! Hold them — hold them!"
   },
-  "you_c2c3a4f7": {
-   "file": "you_c2c3a4f7.mp3",
-   "dur": 1.32,
+  "you_e3ebfa86": {
+   "file": "you_e3ebfa86.mp3",
+   "dur": 2.76,
    "cast": "you",
-   "text": "Ugh… my head…"
+   "text": "Ahh… ugh. My head…"
   },
-  "you_3f7fb067": {
-   "file": "you_3f7fb067.mp3",
-   "dur": 1.3,
+  "you_224bab9b": {
+   "file": "you_224bab9b.mp3",
+   "dur": 1.85,
    "cast": "you",
-   "text": "…What happened here?"
+   "text": "What… what happened…?"
   },
-  "you_a02490d0": {
-   "file": "you_a02490d0.mp3",
-   "dur": 2.59,
+  "you_1bb44cc7": {
+   "file": "you_1bb44cc7.mp3",
+   "dur": 3.5,
    "cast": "you",
-   "text": "Where is everyone…? Where's my unit?"
+   "text": "Hello…? Anyone? …Where the hell is my unit?"
   },
   "kharzanFar_557309f9": {
    "file": "kharzanFar_557309f9.mp3",
-   "dur": 2.21,
+   "dur": 2.62,
    "cast": "kharzanFar",
    "text": "Hesk! Varo tan — varo!"
   },
   "kharzan_d75f9e43": {
    "file": "kharzan_d75f9e43.mp3",
-   "dur": 1.7,
+   "dur": 2.62,
    "cast": "kharzan",
    "text": "Velmori dosk! Tarak!"
   },
-  "you_8c767c43": {
-   "file": "you_8c767c43.mp3",
-   "dur": 2.93,
+  "you_386a51d6": {
+   "file": "you_386a51d6.mp3",
+   "dur": 2.4,
    "cast": "you",
-   "text": "Greycoats! My rifle — I need my rifle!"
+   "text": "Greycoats! My rifle — where's my rifle?!"
   },
   "you_76a42b2c": {
    "file": "you_76a42b2c.mp3",
@@ -48,141 +48,141 @@
    "cast": "you",
    "text": "…That's the last of them."
   },
-  "you_e1bef05e": {
-   "file": "you_e1bef05e.mp3",
-   "dur": 3.55,
+  "you_4ddf8d42": {
+   "file": "you_4ddf8d42.mp3",
+   "dur": 4.34,
    "cast": "you",
-   "text": "And that was my last round. Only the sabre now."
+   "text": "And that was my last round. Great. Just the sabre, then."
   },
-  "you_7f4f666f": {
-   "file": "you_7f4f666f.mp3",
-   "dur": 2.21,
+  "you_ab326a24": {
+   "file": "you_ab326a24.mp3",
+   "dur": 3.6,
    "cast": "you",
-   "text": "A road… it has to lead somewhere."
+   "text": "A road. Finally… it's got to lead somewhere."
   },
   "scout_0f44e020": {
    "file": "scout_0f44e020.mp3",
-   "dur": 1.44,
+   "dur": 2.42,
    "cast": "scout",
    "text": "Velmori! Krask tan!"
   },
-  "you_79acdcb9": {
-   "file": "you_79acdcb9.mp3",
-   "dur": 3.48,
+  "you_05a52819": {
+   "file": "you_05a52819.mp3",
+   "dur": 3.58,
    "cast": "you",
-   "text": "Scouts… the Dominion's crawling all over these woods."
+   "text": "Scouts. The Dominion's crawling all over these woods…"
   },
   "sentry1_f31168f8": {
    "file": "sentry1_f31168f8.mp3",
-   "dur": 2.23,
+   "dur": 2.69,
    "cast": "sentry1",
    "text": "Halt! Who goes there? Show your face!"
   },
-  "you_99085dd8": {
-   "file": "you_99085dd8.mp3",
-   "dur": 2.42,
+  "you_74fba966": {
+   "file": "you_74fba966.mp3",
+   "dur": 4.08,
    "cast": "you",
-   "text": "Easy! I'm — I think I'm one of you!"
+   "text": "Easy! Easy — don't shoot! I'm… I think I'm one of you!"
   },
-  "sentry2_d7046f8c": {
-   "file": "sentry2_d7046f8c.mp3",
-   "dur": 4.87,
+  "sentry2_a98fe51f": {
+   "file": "sentry2_a98fe51f.mp3",
+   "dur": 4.75,
    "cast": "sentry2",
-   "text": "Burgundy tabs on his collar… he's Marches infantry! Open the gate!"
+   "text": "Wait — burgundy tabs on his collar… He's one of ours! Open the gate!"
   },
-  "captain_9c905e0b": {
-   "file": "captain_9c905e0b.mp3",
-   "dur": 4.1,
+  "captain_06e7aa1d": {
+   "file": "captain_06e7aa1d.mp3",
+   "dur": 4.97,
    "cast": "captain",
-   "text": "Easy, soldier. Lower that blade — you're among friends now."
+   "text": "Easy, soldier. Easy. Lower the blade… you're among friends now."
   },
-  "you_d87ea9e8": {
-   "file": "you_d87ea9e8.mp3",
-   "dur": 6.05,
+  "you_d0ff95ae": {
+   "file": "you_d0ff95ae.mp3",
+   "dur": 7.06,
    "cast": "you",
-   "text": "Friends…? I woke up in the Thornwood. No memory, no unit — and greycoats waiting for me."
+   "text": "Friends? I… I woke up in the Thornwood. No memory. No unit. Just greycoats, waiting for me."
   },
-  "captain_e226c30b": {
-   "file": "captain_e226c30b.mp3",
-   "dur": 6.91,
+  "captain_27b49481": {
+   "file": "captain_27b49481.mp3",
+   "dur": 6.62,
    "cast": "captain",
-   "text": "Kharzan raiders. They cut down our patrol two nights past. We thought no one walked out of those woods."
+   "text": "Kharzan raiders. They hit our patrol two nights ago… We thought nobody walked out of those woods."
   },
-  "sergeant_cd4e8bd1": {
-   "file": "sergeant_cd4e8bd1.mp3",
-   "dur": 4.92,
+  "sergeant_08390413": {
+   "file": "sergeant_08390413.mp3",
+   "dur": 5.88,
    "cast": "sergeant",
-   "text": "Look at his collar, Captain. Burgundy tabs — Seventh Company. He's one of ours."
+   "text": "Captain — look at his collar. Burgundy tabs. Seventh Company… he's one of ours, sir."
   },
-  "captain_0530dce5": {
-   "file": "captain_0530dce5.mp3",
-   "dur": 5.21,
+  "captain_e279d1cf": {
+   "file": "captain_e279d1cf.mp3",
+   "dur": 4.97,
    "cast": "captain",
-   "text": "Then welcome home, soldier. Whatever you lost out there, we'll help you find it."
+   "text": "Then welcome home, soldier. Whatever you lost out there… we'll help you find it."
   },
-  "youThought_9a431f84": {
-   "file": "youThought_9a431f84.mp3",
-   "dur": 3.89,
+  "youThought_6f1e46b4": {
+   "file": "youThought_6f1e46b4.mp3",
+   "dur": 4.27,
    "cast": "youThought",
-   "text": "(They know this uniform… They're on my side. I think.)"
+   "text": "(They know this uniform. They're on my side… I think.)"
   },
-  "captain_a87de758": {
-   "file": "captain_a87de758.mp3",
-   "dur": 6.12,
+  "captain_f8875a97": {
+   "file": "captain_f8875a97.mp3",
+   "dur": 4.9,
    "cast": "captain",
-   "text": "Quartermaster! Get this soldier a proper weapon. That sabre won't hold back the Dominion."
+   "text": "Dell! Get this man a proper weapon — that sabre won't hold back the Dominion."
   },
-  "quartermaster_d18a6b05": {
-   "file": "quartermaster_d18a6b05.mp3",
-   "dur": 3.89,
+  "quartermaster_ddb3255b": {
+   "file": "quartermaster_ddb3255b.mp3",
+   "dur": 3.58,
    "cast": "quartermaster",
-   "text": "Aye, Captain! Over here, friend — I've got just the thing."
+   "text": "Aye, sir! Over here, friend — I've got just the thing for you."
   },
-  "quartermaster_b1628ea3": {
-   "file": "quartermaster_b1628ea3.mp3",
-   "dur": 7.46,
+  "quartermaster_4d2d56b0": {
+   "file": "quartermaster_4d2d56b0.mp3",
+   "dur": 6.29,
    "cast": "quartermaster",
-   "text": "Rkm Model 28 automatic rifle. Twenty rounds a box, and she'll chew through them fast — so mind your bursts."
+   "text": "There she is. Rkm Model 28. Twenty rounds a box, and she'll chew through 'em fast — so short bursts, yeah?"
   },
-  "you_06835a1a": {
-   "file": "you_06835a1a.mp3",
-   "dur": 2.11,
+  "you_5d6e0a0b": {
+   "file": "you_5d6e0a0b.mp3",
+   "dur": 3.7,
    "cast": "you",
-   "text": "…This feels familiar. Thank you."
+   "text": "Huh. This feels… familiar. Thanks."
   },
-  "sentry2_2e33755a": {
-   "file": "sentry2_2e33755a.mp3",
-   "dur": 4.63,
+  "sentry2_1c514289": {
+   "file": "sentry2_1c514289.mp3",
+   "dur": 4.44,
    "cast": "sentry2",
-   "text": "Captain! Movement in the treeline — grey uniforms, dozens of them!"
+   "text": "Captain! Movement in the treeline — greycoats, dozens of them!"
   },
   "captain_1caf8171": {
    "file": "captain_1caf8171.mp3",
-   "dur": 3.72,
+   "dur": 3.67,
    "cast": "captain",
    "text": "KHARZANS! Everyone to the walls — hold this fort!"
   },
-  "sergeant_b2dc1fb4": {
-   "file": "sergeant_b2dc1fb4.mp3",
-   "dur": 2.64,
+  "sergeant_d078ebf7": {
+   "file": "sergeant_d078ebf7.mp3",
+   "dur": 3.17,
    "cast": "sergeant",
-   "text": "There's too many of them! They're coming through the wall!"
+   "text": "There's too many of them! They're through the wall!"
   },
-  "soldier_3c1238d9": {
-   "file": "soldier_3c1238d9.mp3",
-   "dur": 2.02,
+  "soldier_9956dcef": {
+   "file": "soldier_9956dcef.mp3",
+   "dur": 2.18,
    "cast": "soldier",
-   "text": "We can't hold! We can't hold!"
+   "text": "We can't hold them! We can't—"
   },
-  "kharzanOfficer_3da567eb": {
-   "file": "kharzanOfficer_3da567eb.mp3",
-   "dur": 3.65,
+  "kharzanOfficer_c896cf0a": {
+   "file": "kharzanOfficer_c896cf0a.mp3",
+   "dur": 3.82,
    "cast": "kharzanOfficer",
-   "text": "This one still breathes… Velmoran. Seventh Company."
+   "text": "Hm. This one's still breathing… Velmoran. Seventh Company."
   },
   "kharzanOfficer_606981fb": {
    "file": "kharzanOfficer_606981fb.mp3",
-   "dur": 4.8,
+   "dur": 4.85,
    "cast": "kharzanOfficer",
    "text": "Take him alive. The Marshal will want to meet the man who walked out of the Thornwood."
   }

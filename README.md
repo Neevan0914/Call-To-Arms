@@ -115,20 +115,33 @@ At runtime:
 
 ## Voices
 
-Every character has their own voice, set in `src/game/voices.js`: you, Captain Halvek,
-Sergeant Brannoc, Quartermaster Dell, the two sentries, a Velmoran soldier, Kharzan
-soldiers and scouts, and the Kharzan officer. Each line is pre-recorded with a neural
-voice (Kokoro-82M, Apache-2.0), then given its own audio treatment: shouts, distant calls,
-a lower pitch and grit for the Kharzan, an echo for inner thoughts.
+Every character has their own voice (`src/game/voices.js`), and every line in
+`src/game/story.js` carries a delivery direction such as `groggy`, `panic`, `warm`,
+`command` or `menace`. The lines are recorded in two stages:
+
+1. **Voice samples:** Kokoro-82M (Apache-2.0) records a clean sample of each character's
+   voice.
+2. **Acted takes:** Chatterbox (Resemble AI, MIT) performs each line in that voice, with
+   emotion intensity and pacing set by the line's delivery. It records several takes per
+   line, Whisper transcribes them, and the script keeps the take that is word-accurate, a
+   sensible length, and the most dynamic.
+
+After that, the line gets its character's audio treatment: shouts, distant calls, a deeper
+and grittier voice for the Kharzan, an echo for inner thoughts.
 
 ```bash
-npm i --no-save kokoro-js@1.2.1    # one-time; downloads the voice model from huggingface.co
-node scripts/generate-voices.mjs   # -> public/assets/voice/*.mp3 + manifest.json
+# one-time tools (big download: PyTorch + models from huggingface.co)
+npm i --no-save kokoro-js@1.2.1
+uv venv -p 3.11 .ttsenv && VIRTUAL_ENV=.ttsenv uv pip install chatterbox-tts==0.1.7
+
+node scripts/generate-voices.mjs --json voicework/lines.json   # lines + delivery
+node scripts/generate-voices.mjs --refs voicework/refs         # voice samples
+.ttsenv/bin/python scripts/voices/chatterbox_takes.py voicework/lines.json voicework/refs voicework/raw
+node scripts/generate-voices.mjs --from-raw voicework/raw      # effects -> public/assets/voice
 ```
 
-`node scripts/generate-voices.mjs --list` prints every line with its cast. Any line
-without a recording falls back to the browser's speech synthesis. The fallback picks the
-most natural voices installed and gives each character a different one.
+To quickly redo everything with Kokoro alone, run `node scripts/generate-voices.mjs --force`.
+Any line without a recording falls back to the browser's speech synthesis.
 
 ## Adding more 3D assets
 

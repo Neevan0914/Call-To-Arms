@@ -210,7 +210,7 @@ export class Story {
     if (this.phase === 'scouts') this.g.hud.setEnemyCount(this.scouts.filter((a) => a.alive).length);
     if (this.phase === 'defend' && actor === this.captain && !this.captainLine) {
       this.captainLine = true;
-      this.bark('Sergeant Brannoc', "The Captain's down! Hold them — hold them!", COL.ally, 2.6, 'sergeant');
+      this.bark('Sergeant Brannoc', "The Captain's down! Hold them — hold them!", COL.ally, 2.6, 'sergeant', 'panic');
     }
   }
 
@@ -392,7 +392,7 @@ export class Story {
       this.tween(u.uEyelid, 'value', 0.35, 1.2);
       this.tween(u.uBlur, 'value', 0.7, 2);
       this.tween(A, 'muffle', 0.25, 4);
-      await this.say('You', 'Ugh… my head…', 3.0, { color: COL.you, voice: 'you', pitch: 0.9, rate: 0.85 });
+      await this.say('You', 'Ahh… ugh. My head…', 3.0, { color: COL.you, voice: 'you', delivery: 'groggy', pitch: 0.9, rate: 0.85 });
       // look toward the rifle
       this.shot((t, o) => {
         const k = easeInOut(t);
@@ -402,7 +402,7 @@ export class Story {
       }, 3.2);
       this.tween(u.uEyelid, 'value', 0.15, 2.4);
       this.tween(u.uBlur, 'value', 0.35, 2.4);
-      await this.say('You', '…What happened here?', 3.0, { color: COL.you, voice: 'you', pitch: 0.9, rate: 0.9 });
+      await this.say('You', 'What… what happened…?', 3.0, { color: COL.you, voice: 'you', delivery: 'groggy', pitch: 0.9, rate: 0.9 });
       this.tween(u.uEyelid, 'value', 1, 0.2);
       await this.wait(0.25);
       this.tween(u.uEyelid, 'value', 0, 0.6);
@@ -423,7 +423,7 @@ export class Story {
         o.fov = 50;
       }, 5.2);
       await this.wait(1.2);
-      await this.say('You', "Where is everyone…? Where's my unit?", 3.4, { color: COL.you, voice: 'you', pitch: 0.9 });
+      await this.say('You', 'Hello…? Anyone? …Where the hell is my unit?', 3.4, { color: COL.you, voice: 'you', delivery: 'uneasy', pitch: 0.9 });
       await this.wait(0.7);
       p.h.a.getup = -1;
       u.uBlur.value = 0;
@@ -432,7 +432,7 @@ export class Story {
       const behind = p.position.clone().addScaledVector(fwd, -2.5).add(V(0, 1.7, 0)).addScaledVector(right, 0.7);
       this.shot((t, o) => { o.pos.copy(behind); o.look.copy(lead.position).add(V(0, 1.2, 0)); o.fov = 52; }, 2.5);
       for (const e of this.ambushers) { e.lookAt = p.position; }
-      await this.say('Kharzan soldier (distant)', 'Hesk! Varo tan — varo!', 2.2, { color: COL.enemy, voice: 'kharzanFar', pitch: 0.6, rate: 1.1 });
+      await this.say('Kharzan soldier (distant)', 'Hesk! Varo tan — varo!', 2.2, { color: COL.enemy, voice: 'kharzanFar', delivery: 'shout', pitch: 0.6, rate: 1.1 });
       // a bullet slams into a tree beside the player
       const hitPt = p.position.clone().addScaledVector(right, 1.3).add(V(0, 1.4, 0)).addScaledVector(fwd, 0.6);
       A.shot('rifle', lead.position.clone().add(V(0, 1.5, 0)));
@@ -446,13 +446,13 @@ export class Story {
       const mid = this.ambushers.reduce((m, e) => m.add(e.position), V(0, 0, 0)).divideScalar(this.ambushers.length);
       const camP = mid.clone().lerp(p.position, 0.35).add(V(0, 1.6, 4));
       this.shot((t, o) => { o.pos.copy(camP).add(V(-t * 1.5, 0, 0)); o.look.copy(mid).add(V(0, 1.3, 0)); o.fov = 45 - t * 6; }, 3.2);
-      await this.say('Kharzan soldier', 'Velmori dosk! Tarak!', 2.4, { color: COL.enemy, voice: 'kharzan', pitch: 0.5, rate: 1.05 });
+      await this.say('Kharzan soldier', 'Velmori dosk! Tarak!', 2.4, { color: COL.enemy, voice: 'kharzan', delivery: 'shout', pitch: 0.5, rate: 1.05 });
       this.shot((t, o) => {
         o.pos.copy(p.position).addScaledVector(right, 0.7).add(V(0, 1.5, 0)).addScaledVector(fwd, -2.2);
         o.look.copy(this.riflePos).add(V(0, 0.2, 0));
         o.fov = 55;
       }, 2.6);
-      await this.say('You', 'Greycoats! My rifle — I need my rifle!', 2.6, { color: COL.you, voice: 'you', rate: 1.15 });
+      await this.say('You', "Greycoats! My rifle — where's my rifle?!", 2.6, { color: COL.you, voice: 'you', delivery: 'panic', rate: 1.15 });
     });
     p.h.a.getup = -1;
     p.h.root.visible = true;
@@ -523,13 +523,13 @@ export class Story {
     g.hud.setEnemyCount(null);
     g.audio.setMood('calm');
     await this.wait(1.4);
-    this.bark('You', "…That's the last of them.", COL.you, 2.4, 'you');
+    this.bark('You', "…That's the last of them.", COL.you, 2.4, 'you', 'breathless');
     await this.wait(2.6);
     p.weapons.rifle.mag = 0; p.weapons.rifle.reserve = 0;
     g.hud.updateWeapon(p);
     g.audio.dryFire();
     g.hud.notify('Varn M.09 Rifle — out of ammunition');
-    this.bark('You', 'And that was my last round. Only the sabre now.', COL.you, 3.2, 'you');
+    this.bark('You', 'And that was my last round. Great. Just the sabre, then.', COL.you, 3.2, 'you', 'dry');
     await this.wait(1.2);
     p.equip('sword');
     g.hud.notify('Sabre drawn — LMB to slash');
@@ -551,7 +551,7 @@ export class Story {
     await this.until(() => T.pathQuery(p.position.x, p.position.z).d < 4.5);
     this.phaseUpdate = null;
     g.hud.setMarker(null);
-    this.bark('You', 'A road… it has to lead somewhere.', COL.you, 3, 'you');
+    this.bark('You', "A road. Finally… it's got to lead somewhere.", COL.you, 3, 'you', 'relieved');
     g.hud.setObjective('Follow the dirt path');
     this.phase = 'path';
     // compute s of the scout ambush point (on the bend south of the clearing)
@@ -583,7 +583,7 @@ export class Story {
     spawnScouts();
     const cpS = this._pathS;
     g.audio.setMood('combat');
-    this.bark('Kharzan scout', 'Velmori! Krask tan!', COL.enemy, 2, 'scout');
+    this.bark('Kharzan scout', 'Velmori! Krask tan!', COL.enemy, 2, 'scout', 'shout');
     g.hud.setObjective('Kharzan scouts — cut them down');
     g.hud.setEnemyCount(2);
     this.phaseUpdate = null;
@@ -605,7 +605,7 @@ export class Story {
     g.hud.setEnemyCount(null);
     g.audio.setMood('calm');
     await this.wait(1.2);
-    this.bark('You', "Scouts… the Dominion's crawling all over these woods.", COL.you, 3.2, 'you');
+    this.bark('You', "Scouts. The Dominion's crawling all over these woods…", COL.you, 3.2, 'you', 'uneasy');
     g.hud.setObjective('Follow the dirt path');
     this.phase = 'path2';
     this.phaseUpdate = () => {
@@ -644,14 +644,14 @@ export class Story {
       this.shot((t, o) => { o.pos.copy(gt).add(V(-3 + t * 1.2, -1.2, 9)); o.look.copy(s0.position).add(V(0, 1.4, 0)); o.fov = 40; }, 3);
       s0.lookAt = p.position;
       s0.h.a.aim = 1;
-      await this.say('Sentry', 'Halt! Who goes there? Show your face!', 2.8, { color: COL.ally, voice: 'sentry1', actor: s0, rate: 1.1 });
+      await this.say('Sentry', 'Halt! Who goes there? Show your face!', 2.8, { color: COL.ally, voice: 'sentry1', delivery: 'shout', actor: s0, rate: 1.1 });
       const over = p.position.clone().addScaledVector(toFort, -2.0).add(V(0.6, 1.5, 0));
       this.shot((t, o) => { o.pos.copy(over).add(V(0, t * 0.2, 0)); o.look.copy(gt).add(V(0, 1.4, 0)); o.fov = 48; }, 3.2);
-      await this.say('You', "Easy! I'm — I think I'm one of you!", 2.8, { color: COL.you, voice: 'you' });
+      await this.say('You', "Easy! Easy — don't shoot! I'm… I think I'm one of you!", 2.8, { color: COL.you, voice: 'you', delivery: 'urgent' });
       const s1 = this.sentries[1];
       s1.lookAt = p.position;
       this.shot((t, o) => { o.pos.copy(gt).add(V(3 - t, -1.0, 8)); o.look.copy(s1.position).add(V(0, 1.4, 0)); o.fov = 38; }, 3.2);
-      await this.say('Sentry', "Burgundy tabs on his collar… he's Marches infantry! Open the gate!", 3.2, { color: COL.ally, voice: 'sentry2', actor: s1 });
+      await this.say('Sentry', "Wait — burgundy tabs on his collar… He's one of ours! Open the gate!", 3.2, { color: COL.ally, voice: 'sentry2', delivery: 'shout', actor: s1 });
       f.openGate();
       A._noiseBurst && A.enabled && A._noiseBurst(A.sfx, { dur: 2.2, type: 'bandpass', f0: 300, f1: 180, q: 4, gain: 0.25, buffer: A.brown });
       this.shot((t, o) => { o.pos.copy(f.spots.gateOutside).add(V(-4, 2.2, 6)); o.look.copy(f.spots.gateFront).add(V(0, 2.5, -4)); o.fov = 50; }, 3);
@@ -697,38 +697,38 @@ export class Story {
         o.fov = 50;
       }, 4.2);
       await this.wait(0.8);
-      await this.say('Captain Halvek', "Easy, soldier. Lower that blade — you're among friends now.", 3.6, { color: COL.officer, voice: 'captain', actor: cap, pitch: 0.8, rate: 0.95 });
+      await this.say('Captain Halvek', "Easy, soldier. Easy. Lower the blade… you're among friends now.", 3.6, { color: COL.officer, voice: 'captain', delivery: 'warm', actor: cap, pitch: 0.8, rate: 0.95 });
       // 2. over player's shoulder toward captain
       this.shot((t, o) => {
         o.pos.copy(p.position).add(V(0.85, 1.72, 1.55 + t * 0.15));
         head(cap, o.look);
         o.fov = 40;
       }, 5);
-      await this.say('You', 'Friends…? I woke up in the Thornwood. No memory, no unit — and greycoats waiting for me.', 4.8, { color: COL.you, voice: 'you', actor: p });
+      await this.say('You', 'Friends? I… I woke up in the Thornwood. No memory. No unit. Just greycoats, waiting for me.', 4.8, { color: COL.you, voice: 'you', delivery: 'shaken', actor: p });
       // 3. captain close up
       this.shot((t, o) => {
         o.look.copy(this.faceCam(cap, o.pos, 1.35 - t * 0.1, 0.45, -0.05));
         o.fov = 34;
       }, 5.4);
-      await this.say('Captain Halvek', 'Kharzan raiders. They cut down our patrol two nights past. We thought no one walked out of those woods.', 5.2, { color: COL.officer, voice: 'captain', actor: cap, pitch: 0.8, rate: 0.95 });
+      await this.say('Captain Halvek', 'Kharzan raiders. They hit our patrol two nights ago… We thought nobody walked out of those woods.', 5.2, { color: COL.officer, voice: 'captain', delivery: 'grave', actor: cap, pitch: 0.8, rate: 0.95 });
       // 4. sergeant
       this.shot((t, o) => {
         o.look.copy(this.faceCam(sgt, o.pos, 1.4, -0.6, 0.0));
         o.fov = 36;
       }, 4.4);
-      await this.say('Sergeant Brannoc', "Look at his collar, Captain. Burgundy tabs — Seventh Company. He's one of ours.", 4.2, { color: COL.ally, voice: 'sergeant', actor: sgt });
+      await this.say('Sergeant Brannoc', "Captain — look at his collar. Burgundy tabs. Seventh Company… he's one of ours, sir.", 4.2, { color: COL.ally, voice: 'sergeant', delivery: 'urgent', actor: sgt });
       // 5. captain
       this.shot((t, o) => {
         o.look.copy(this.faceCam(cap, o.pos, 1.45 - t * 0.2, -0.35, 0.05));
         o.fov = 34;
       }, 4.4);
-      await this.say('Captain Halvek', "Then welcome home, soldier. Whatever you lost out there, we'll help you find it.", 4.2, { color: COL.officer, voice: 'captain', actor: cap, pitch: 0.8, rate: 0.95 });
+      await this.say('Captain Halvek', "Then welcome home, soldier. Whatever you lost out there… we'll help you find it.", 4.2, { color: COL.officer, voice: 'captain', delivery: 'warm', actor: cap, pitch: 0.8, rate: 0.95 });
       // 6. player's face — inner thought
       this.shot((t, o) => {
         o.look.copy(this.faceCam(p, o.pos, 1.2 - t * 0.15, 0.25, 0.02));
         o.fov = 32;
       }, 4.2);
-      await this.say('You', "(They know this uniform… They're on my side. I think.)", 4.0, { color: COL.you, italic: true, voice: 'youThought', speak: false });
+      await this.say('You', "(They know this uniform. They're on my side… I think.)", 4.0, { color: COL.you, italic: true, voice: 'youThought', delivery: 'thought', speak: false });
       // 7. captain orders the quartermaster
       cap.lookAt = qm.position;
       this.shot((t, o) => {
@@ -736,11 +736,11 @@ export class Story {
         o.look.copy(qm.position).add(V(0, 1.2, 0)).lerp(S.captain.clone().add(V(0, 1.5, 0)), 0.5 - t * 0.4);
         o.fov = 44;
       }, 4.4);
-      await this.say('Captain Halvek', "Quartermaster! Get this soldier a proper weapon. That sabre won't hold back the Dominion.", 4.2, { color: COL.officer, voice: 'captain', actor: cap, pitch: 0.8 });
+      await this.say('Captain Halvek', "Dell! Get this man a proper weapon — that sabre won't hold back the Dominion.", 4.2, { color: COL.officer, voice: 'captain', delivery: 'command', actor: cap, pitch: 0.8 });
       qm.lookAt = p.position;
       qm.h.a.wave = 1;
       this.shot((t, o) => { o.look.copy(this.faceCam(qm, o.pos, 2.2, -1.0, 0.1)); o.fov = 38; }, 3.4);
-      await this.say('Quartermaster Dell', "Aye, Captain! Over here, friend — I've got just the thing.", 3.2, { color: COL.qm, voice: 'quartermaster', actor: qm });
+      await this.say('Quartermaster Dell', "Aye, sir! Over here, friend — I've got just the thing for you.", 3.2, { color: COL.qm, voice: 'quartermaster', delivery: 'cheerful', actor: qm });
       qm.h.a.wave = 0;
     });
     qm.h.a.wave = 0;
@@ -767,19 +767,19 @@ export class Story {
         head(qm, o.look); o.look.y -= 0.3;
         o.fov = 42;
       }, 5.4);
-      await this.say('Quartermaster Dell', "Rkm Model 28 automatic rifle. Twenty rounds a box, and she'll chew through them fast — so mind your bursts.", 5.4, { color: COL.qm, voice: 'quartermaster', actor: qm });
+      await this.say('Quartermaster Dell', "There she is. Rkm Model 28. Twenty rounds a box, and she'll chew through 'em fast — so short bursts, yeah?", 5.4, { color: COL.qm, voice: 'quartermaster', delivery: 'cheerful', actor: qm });
       qm.setWeapon('none');
       p.give('lmg', 20, 120);
       A.pickup();
       this.shot((t, o) => { o.look.copy(this.faceCam(p, o.pos, 1.5, -0.6, -0.1)); o.look.y -= 0.3; o.fov = 38; }, 3.2);
-      await this.say('You', '…This feels familiar. Thank you.', 3.0, { color: COL.you, voice: 'you', actor: p });
+      await this.say('You', 'Huh. This feels… familiar. Thanks.', 3.0, { color: COL.you, voice: 'you', delivery: 'thoughtful', actor: p });
       // trouble
       A.whistle();
       await this.wait(1.0);
       const s1 = this.sentries[1];
       this.shot((t, o) => { o.pos.copy(f.gateTop).add(V(2, -2.2, -7)); o.look.copy(s1.position).add(V(0, 1.4, 0)); o.fov = 42; }, 3.6);
       s1.faceYaw = 0; s1.h.a.aim = 1;
-      await this.say('Sentry', 'Captain! Movement in the treeline — grey uniforms, dozens of them!', 3.4, { color: COL.ally, voice: 'sentry2', actor: s1, rate: 1.2 });
+      await this.say('Sentry', 'Captain! Movement in the treeline — greycoats, dozens of them!', 3.4, { color: COL.ally, voice: 'sentry2', delivery: 'panic', actor: s1, rate: 1.2 });
       A.setMood('tension');
       A.horn();
       // spawn the attackers now so they're visible
@@ -803,7 +803,7 @@ export class Story {
       this.captain.lookAt = S.gateInside;
       this.captain.faceYaw = 0;
       this.shot((t, o) => { o.look.copy(this.faceCam(this.captain, o.pos, 1.7, 0.6, 0.1)); o.fov = 40; }, 3.4);
-      await this.say('Captain Halvek', 'KHARZANS! Everyone to the walls — hold this fort!', 3.0, { color: COL.officer, voice: 'captain', actor: this.captain, pitch: 0.75, rate: 1.15 });
+      await this.say('Captain Halvek', 'KHARZANS! Everyone to the walls — hold this fort!', 3.0, { color: COL.officer, voice: 'captain', delivery: 'shout', actor: this.captain, pitch: 0.75, rate: 1.15 });
     });
     if (!f.debris.visible) { f.blowBreach(); }
     if (!this.attackers.length) this.spawnWave(true);
@@ -865,8 +865,8 @@ export class Story {
         nextShell = rand(5, 9);
         this.artillery();
       }
-      if (el > 45 && !this.warned) { this.warned = true; this.bark('Sergeant Brannoc', "There's too many of them! They're coming through the wall!", COL.ally, 3, 'sergeant'); }
-      if (el > 75 && !this.warned2) { this.warned2 = true; this.bark('Velmoran Soldier', "We can't hold! We can't hold!", COL.ally, 2.6, 'soldier'); }
+      if (el > 45 && !this.warned) { this.warned = true; this.bark('Sergeant Brannoc', "There's too many of them! They're through the wall!", COL.ally, 3, 'sergeant', 'panic'); }
+      if (el > 75 && !this.warned2) { this.warned2 = true; this.bark('Velmoran Soldier', "We can't hold them! We can't—", COL.ally, 2.6, 'soldier', 'panic'); }
     };
     await this.until(() => {
       const el = g.time - t0;
@@ -957,8 +957,8 @@ export class Story {
         o.fov = 58;
       }, 9);
       await this.wait(3.2);
-      await this.say('Kharzan Officer', 'This one still breathes… Velmoran. Seventh Company.', 3.8, { color: COL.enemy, voice: 'kharzanOfficer', pitch: 0.5, rate: 0.85, actor: officer });
-      await this.say('Kharzan Officer', 'Take him alive. The Marshal will want to meet the man who walked out of the Thornwood.', 4.8, { color: COL.enemy, voice: 'kharzanOfficer', pitch: 0.5, rate: 0.85, actor: officer });
+      await this.say('Kharzan Officer', "Hm. This one's still breathing… Velmoran. Seventh Company.", 3.8, { color: COL.enemy, voice: 'kharzanOfficer', delivery: 'menace', pitch: 0.5, rate: 0.85, actor: officer });
+      await this.say('Kharzan Officer', 'Take him alive. The Marshal will want to meet the man who walked out of the Thornwood.', 4.8, { color: COL.enemy, voice: 'kharzanOfficer', delivery: 'menace', pitch: 0.5, rate: 0.85, actor: officer });
       this.tween(u.uEyelid, 'value', 1, 3);
       this.tween(u.uFade, 'value', 1, 3.5);
       await this.wait(3.8);

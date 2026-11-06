@@ -21,10 +21,13 @@ export const CAST = {
 export function spokenText(text) {
   return text
     .replace(/^\((.*)\)$/, '$1')
+    .replace(/(\w)—(?=\s|$)/g, '$1-') // cut-off word ("Wha—", "We can't—")
     .replace(/\s*—\s*/g, ', ')
+    .replace(/\bModel 28\b/g, 'Model twenty-eight')
     .replace(/…/g, '...')
     .replace(/\bRkm\b/g, 'R K M')
-    .replace(/\bKHARZANS\b/g, 'Kharzans');
+    .replace(/\bKHARZANS\b/g, 'Kharzans')
+    .replace(/\bgreycoats\b/gi, (m) => (m[0] === 'G' ? 'Grey coats' : 'grey coats'));
 }
 
 // Stable id for a line: cast + FNV-1a hash of the text.
