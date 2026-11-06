@@ -202,6 +202,14 @@ export class AudioEngine {
     this._tone(node, { dur: 0.12, f0: 180, f1: 60, gain: 0.5 });
   }
 
+  slam(pos) {
+    if (!this.enabled) return;
+    const { node } = this._spatial(pos, 5);
+    this._tone(node, { dur: 0.45, f0: 110, f1: 32, gain: 1.1, attack: 0.004 });
+    this._noiseBurst(node, { dur: 0.5, type: 'lowpass', f0: 1400, f1: 90, q: 0.8, gain: 1.0, buffer: this.brown });
+    this._noiseBurst(node, { t0: 0.04, dur: 0.7, type: 'bandpass', f0: 2200, f1: 500, q: 0.9, gain: 0.35 });
+  }
+
   clang(pos) {
     if (!this.enabled) return;
     const { node } = this._spatial(pos, 3);

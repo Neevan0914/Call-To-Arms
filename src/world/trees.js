@@ -12,11 +12,38 @@ export const SPECIES = {
 };
 
 const FRAMES = 8;
+
+// Dithered LOD cross-fade. aFade <= 1: keep pixels whose dither value < aFade;
+// aFade > 1: keep pixels whose dither value >= aFade - 1. The two LODs of a tree in a
+// transition band get complementary values, so together they always cover the tree once.
+const DITHER = `{
+  float ditherV = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+  if (vFade <= 1.0 ? ditherV >= vFade : ditherV < vFade - 1.0) discard;
+}`;
+function ditherFade(mat) {
+  if (mat.userData.dither) return;
+  mat.userData.dither = true;
+  const prev = mat.onBeforeCompile;
+  const prevKey = mat.customProgramCacheKey();
+  mat.onBeforeCompile = function (sh, r) {
+    prev.call(this, sh, r);
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float aFade;\nvarying float vFade;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvFade = aFade;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying float vFade;')
+      .replace('void main() {', `void main() {\n${DITHER}`);
+  };
+  mat.customProgramCacheKey = () => prevKey + '|dither';
+  mat.needsUpdate = true;
+}
 const FOLIAGE = /leaf|needle/i;
 
 const IMPOSTOR_VS = `
   uniform float uR, uH;
   uniform vec3 uSunDir;
+  attribute float aFade;
+  varying float vFade;
   varying vec2 vUv;
   varying float vSun;
   varying vec3 vTint;
@@ -41,6 +68,7 @@ const IMPOSTOR_VS = `
     #else
       vTint = vec3(1.0);
     #endif
+    vFade = aFade;
     vec4 mvPosition = viewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mvPosition;
     #include <fog_vertex>
@@ -52,9 +80,11 @@ const IMPOSTOR_FS = `
   varying vec2 vUv;
   varying float vSun;
   varying vec3 vTint;
+  varying float vFade;
   #include <common>
   #include <fog_pars_fragment>
   void main() {
+    ${DITHER}
     // cap the mip level: averaged alpha in small mips would turn silhouettes into blocks
     vec2 tsz = vec2(textureSize(tAtlas, 0));
     vec2 dx = dFdx(vUv * tsz), dy = dFdy(vUv * tsz);
@@ -76,8 +106,7 @@ export class TreeSystem {
     this.trees = trees;
     this.species = {};
     const Q = quality;
-    this.l0 = Q === 'high' ? 32 : Q === 'medium' ? 24 : 15;
-    this.l1 = Q === 'high' ? 75 : Q === 'medium' ? 58 : 40;
+    this.setQuality(Q);
     this.draw = Q === 'high' ? 470 : Q === 'medium' ? 400 : 320;
     this.margin = 32;
     const counts = {};
@@ -111,13 +140,17 @@ export class TreeSystem {
           if (m.alphaTest > 0) m.alphaTest = Math.max(m.alphaTest, 0.4);
           windify(m, uniforms, SPECIES[name].wind, Hh, SPECIES[name].transl);
         }
+        ditherFade(m);
       }
       for (const [li, parts] of [[0, parts0], [1, parts1]]) {
         const matAttr = new THREE.InstancedBufferAttribute(new Float32Array(cap * 16), 16);
         matAttr.setUsage(THREE.DynamicDrawUsage);
         const colAttr = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3);
         colAttr.setUsage(THREE.DynamicDrawUsage);
+        const fadeAttr = new THREE.InstancedBufferAttribute(new Float32Array(cap), 1);
+        fadeAttr.setUsage(THREE.DynamicDrawUsage);
         const meshes = parts.map((p) => {
+          p.geometry.setAttribute('aFade', fadeAttr);
           const im = new THREE.InstancedMesh(p.geometry, p.material, cap);
           im.instanceMatrix = matAttr;
           im.instanceColor = colAttr;
@@ -128,7 +161,7 @@ export class TreeSystem {
           scene.add(im);
           return im;
         });
-        sp.lods.push({ meshes, matAttr, colAttr, count: 0 });
+        sp.lods.push({ meshes, matAttr, colAttr, fadeAttr, count: 0 });
       }
       // impostor
       const atlas = this._bake(renderer, parts0, R, Hh, Q === 'low' ? 256 : 512);
@@ -145,10 +178,12 @@ export class TreeSystem {
       const imp = new THREE.InstancedMesh(g, imat, cap);
       const iMat = new THREE.InstancedBufferAttribute(new Float32Array(cap * 16), 16); iMat.setUsage(THREE.DynamicDrawUsage);
       const iCol = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3); iCol.setUsage(THREE.DynamicDrawUsage);
+      const iFade = new THREE.InstancedBufferAttribute(new Float32Array(cap), 1); iFade.setUsage(THREE.DynamicDrawUsage);
+      g.setAttribute('aFade', iFade);
       imp.instanceMatrix = iMat; imp.instanceColor = iCol;
       imp.frustumCulled = false; imp.castShadow = false; imp.receiveShadow = false; imp.count = 0;
       scene.add(imp);
-      sp.lods.push({ meshes: [imp], matAttr: iMat, colAttr: iCol, count: 0 });
+      sp.lods.push({ meshes: [imp], matAttr: iMat, colAttr: iCol, fadeAttr: iFade, count: 0 });
       sp.atlas = atlas;
       this.species[name] = sp;
     }
@@ -235,8 +270,10 @@ export class TreeSystem {
   }
 
   setQuality(q) {
-    this.l0 = q === 'high' ? 32 : q === 'medium' ? 24 : 15;
-    this.l1 = q === 'high' ? 75 : q === 'medium' ? 58 : 40;
+    this.l0 = q === 'high' ? 38 : q === 'medium' ? 28 : 17;
+    this.l1 = q === 'high' ? 105 : q === 'medium' ? 80 : 52;
+    this.band0 = q === 'low' ? 6 : 10; // cross-fade band widths (m)
+    this.band1 = q === 'low' ? 12 : 22;
   }
 
   update(camera) {
@@ -244,9 +281,18 @@ export class TreeSystem {
     this._pm.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     this._frustum.setFromProjectionMatrix(this._pm);
     const cx = camera.position.x, cz = camera.position.z;
-    const l0 = this.l0 * this.l0, l1 = this.l1 * this.l1, dr = this.draw * this.draw;
+    const dr = this.draw * this.draw;
+    const a0 = this.l0 - this.band0 / 2, a1 = this.l0 + this.band0 / 2;
+    const b0 = this.l1 - this.band1 / 2, b1 = this.l1 + this.band1 / 2;
     for (const k in this.species) for (const L of this.species[k].lods) L.count = 0;
     const T = this.trees, M = this.mats, sph = this._sph, fr = this._frustum;
+    const put = (L, i, t, fade) => {
+      const j = L.count++;
+      const a = L.matAttr.array, o = i * 16, p = j * 16;
+      for (let k = 0; k < 16; k++) a[p + k] = M[o + k];
+      L.colAttr.array[j * 3] = t.c; L.colAttr.array[j * 3 + 1] = t.c; L.colAttr.array[j * 3 + 2] = t.c;
+      L.fadeAttr.array[j] = fade;
+    };
     for (let i = 0; i < T.length; i++) {
       const t = T[i];
       const sp = this.species[t.species];
@@ -254,22 +300,24 @@ export class TreeSystem {
       const dx = t.x - cx, dz = t.z - cz;
       const d2 = dx * dx + dz * dz;
       if (d2 > dr) continue;
-      const lod = d2 < l0 ? 0 : d2 < l1 ? 1 : 2;
+      const d = Math.sqrt(d2);
+      const meshLod = d < b1;
       const h = sp.height * t.s;
       sph.center.set(t.x, t.y + h * 0.5, t.z);
-      sph.radius = Math.max(h * 0.55, sp.radius * t.s) + (lod < 2 ? this.margin : 0);
+      sph.radius = Math.max(h * 0.55, sp.radius * t.s) + (meshLod ? this.margin : 0);
       if (!fr.intersectsSphere(sph)) continue;
-      const L = sp.lods[lod];
-      const j = L.count++;
-      const a = L.matAttr.array;
-      const o = i * 16, p = j * 16;
-      for (let k = 0; k < 16; k++) a[p + k] = M[o + k];
-      L.colAttr.array[j * 3] = t.c; L.colAttr.array[j * 3 + 1] = t.c; L.colAttr.array[j * 3 + 2] = t.c;
+      const L = sp.lods;
+      if (d < a0) put(L[0], i, t, 1);
+      else if (d < a1) { const f = (d - a0) / (a1 - a0); put(L[0], i, t, 1 - f); put(L[1], i, t, 2 - f); }
+      else if (d < b0) put(L[1], i, t, 1);
+      else if (d < b1) { const f = (d - b0) / (b1 - b0); put(L[1], i, t, 1 - f); put(L[2], i, t, 2 - f); }
+      else put(L[2], i, t, 1);
     }
     for (const k in this.species) {
       for (const L of this.species[k].lods) {
         L.matAttr.needsUpdate = true;
         L.colAttr.needsUpdate = true;
+        L.fadeAttr.needsUpdate = true;
         L.matAttr.addUpdateRange?.(0, L.count * 16);
         for (const m of L.meshes) { m.count = L.count; m.visible = L.count > 0; }
       }

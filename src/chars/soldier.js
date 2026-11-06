@@ -50,6 +50,7 @@ export class Soldier {
     this.deadT = 0;
     this.onDeath = opts.onDeath || null;
     this.vel = new THREE.Vector3();
+    this.kb = new THREE.Vector3();
     this.lastPos = this.position.clone();
     this.speedNow = 0;
     this._v = new THREE.Vector3(); this._a = new THREE.Vector3(); this._b = new THREE.Vector3();
@@ -71,6 +72,14 @@ export class Soldier {
   aimPoint(out = new THREE.Vector3()) { return this.h.chestWorld(out); }
   get crouched() { return this.h.a.crouch > 0.5; }
   speedXZ() { return this.speedNow; }
+
+  // shoved by a heavy blow: slides back and staggers briefly
+  knockback(dir, power) {
+    if (!this.alive || this.invulnerable) return;
+    this.kb.x += dir.x * power; this.kb.z += dir.z * power;
+    this.stunT = Math.max(this.stunT, 0.35 + power * 0.06);
+    this.h.a.hurt = 1;
+  }
 
   goTo(points, speed = 2.2) {
     this.route = (Array.isArray(points) ? points : [points]).map((p) => p.clone());
@@ -279,8 +288,9 @@ export class Soldier {
       this.vel.x = damp(this.vel.x, 0, 10, dt);
       this.vel.z = damp(this.vel.z, 0, 10, dt);
     }
-    this.position.x += this.vel.x * dt;
-    this.position.z += this.vel.z * dt;
+    this.position.x += (this.vel.x + this.kb.x) * dt;
+    this.position.z += (this.vel.z + this.kb.z) * dt;
+    this.kb.multiplyScalar(Math.exp(-6 * dt));
     if (!far) {
       g.physics.resolve(this.position, this.radius);
       g.separate(this, this.radius);

@@ -436,7 +436,7 @@ export class Vegetation {
           else b.stump.push({ m: mat(x, y - 0.05, z, rnd() * 6.28, 0.7 + rnd() * 0.6), c: 1 });
         }
         // ferns / bushes in the forest understory
-        if (corridor && f > 0.25 && pq.d > 3 && rnd() < (propModels.fern ? 0.5 : 0.75) * density) {
+        if (corridor && f > 0.25 && pq.d > 3 && rnd() < (propModels.fern ? 0.35 : 0.75) * density) {
           for (let k = 0; k < (propModels.fern ? 1 : 2); k++) {
             const fx = x + (rnd() - 0.5) * step, fz = z + (rnd() - 0.5) * step;
             b.fern.push({ m: mat(fx, terrain.getHeight(fx, fz) - 0.05, fz, rnd() * 6.28, 0.7 + rnd() * 0.8), c: 0.75 + rnd() * 0.5 });

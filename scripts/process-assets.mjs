@@ -145,8 +145,8 @@ const run = (k) => !only || only === k;
 if (run('soldiers')) {
   for (const s of ['soldier_rifleman', 'soldier_gunner']) {
     if (!existsSync(`${SRC}/${s}.glb`)) continue;
-    await simple(s, 'characters', 0.05, 0.004, s);
-    await simple(s, 'characters', 0.014, 0.012, `${s}_lod1`);
+    await simple(s, 'characters', 0.085, 0.0015, s);
+    await simple(s, 'characters', 0.022, 0.006, `${s}_lod1`);
   }
 }
 if (run('weapons')) {
@@ -183,14 +183,14 @@ if (run('expansion') && existsSync(`${SRC}/expansion`)) {
   }
   for (const b of ['bush_hazel', 'bush_berry']) {
     await prop(X(b), `${OUT}/nature/${b}.glb`, [
-      { match: /leaf/i, keep: 0.12, grow: 1.35, simplify: 0.22, error: 0.08 },
-      { match: /berry/i, keep: 0.08, grow: 1.4, simplify: 0.1, error: 0.08 },
+      { match: /leaf/i, keep: 0.22, grow: 1.18, simplify: 0.3, error: 0.05 },
+      { match: /berry/i, keep: 0.15, grow: 1.2, simplify: 0.15, error: 0.05 },
       { match: any, keep: 1, simplify: 0.04, error: 0.05 },
     ]);
   }
   for (const f of ['fern_clump', 'fern_small']) {
     await prop(X(f), `${OUT}/nature/${f}.glb`, [
-      { match: /fern_/i, keep: 0.6, grow: 1.1, simplify: 0.06, error: 0.08 },
+      { match: /fern_/i, keep: 0.85, grow: 1.03, simplify: 0.1, error: 0.05 },
       { match: any, keep: 1, simplify: 0.08, error: 0.06 },
     ]);
   }
@@ -206,15 +206,15 @@ if (run('trees')) {
   // keep: fraction of foliage clusters kept; grow: survivor scale-up; bark: decimation ratio
   // lod0 = near (<~35 m), lod1 = mid (<~75 m). Distant trees use billboard impostors baked at runtime.
   await tree('tree_pine', [
-    { keep: 0.7, grow: 1.08, leafSimplify: 1, bark: 0.03, barkErr: 0.02 },
-    { keep: 0.2, grow: 1.42, leafSimplify: 1, bark: 0.006, barkErr: 0.1 },
+    { keep: 0.9, grow: 1.02, leafSimplify: 1, bark: 0.06, barkErr: 0.01 },
+    { keep: 0.42, grow: 1.22, leafSimplify: 1, bark: 0.012, barkErr: 0.05 },
   ]);
   await tree('tree_birch', [
-    { keep: 0.38, grow: 1.18, leafSimplify: 0.35, bark: 0.18, barkErr: 0.01 },
-    { keep: 0.22, grow: 1.42, leafSimplify: 0.22, bark: 0.04, barkErr: 0.05 },
+    { keep: 0.5, grow: 1.1, leafSimplify: 0.5, bark: 0.3, barkErr: 0.005 },
+    { keep: 0.3, grow: 1.28, leafSimplify: 0.3, bark: 0.06, barkErr: 0.03 },
   ]);
   await tree('tree_oak', [
-    { keep: 0.38, grow: 1.18, leafSimplify: 0.35, bark: 0.08, barkErr: 0.01 },
-    { keep: 0.22, grow: 1.42, leafSimplify: 0.22, bark: 0.016, barkErr: 0.05 },
+    { keep: 0.5, grow: 1.1, leafSimplify: 0.5, bark: 0.15, barkErr: 0.005 },
+    { keep: 0.3, grow: 1.28, leafSimplify: 0.3, bark: 0.03, barkErr: 0.03 },
   ]);
 }

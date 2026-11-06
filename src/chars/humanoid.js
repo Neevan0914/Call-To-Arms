@@ -96,7 +96,7 @@ export class Humanoid {
     this.a = {
       speed: 0, crouch: 0, aim: 0, pitch: 0, weapon: 'none', swing: -1, swingVariant: 0, recoil: 0, reload: -1,
       lookTarget: null, talk: 0, phase: Math.random() * 6, getup: -1, hurt: 0, dead: false, deathT: 0, deathDir: 1,
-      thrust: -1, wave: 0, salute: 0, offer: 0,
+      thrust: -1, wave: 0, salute: 0, offer: 0, flip: 0, tuck: 0, twirl: 0, moveCrouch: 0, swordOverride: null,
     };
     this.walk = 0;
     this.t = Math.random() * 10;
@@ -398,8 +398,11 @@ export class Humanoid {
     let spineX = 0.1 * amp * wk + breath, chestX = breath * 0.5, spineY = -s * 0.1 * amp * wk, hipsRY = s * 0.08 * amp * wk;
     let chestZ = 0, spineZ = 0;
     // crouch
-    const cr = a.crouch * (1 - wk * 0.4);
+    const cr = Math.min(1, a.crouch * (1 - wk * 0.4) + (a.moveCrouch || 0));
     thL += -1.0 * cr; thR += -0.85 * cr; knL += 1.7 * cr; knR += 1.5 * cr; hipY -= 0.3 * cr; spineX += 0.25 * cr;
+    // acrobatics: legs tucked to the chest mid-flip
+    const tuck = a.tuck || 0;
+    if (tuck) { thL -= 1.7 * tuck; thR -= 1.6 * tuck; knL += 2.3 * tuck; knR += 2.2 * tuck; spineX += 0.55 * tuck; }
     // aim pitch
     const pitch = clamp(a.pitch, -1.1, 1.1);
     spineX -= pitch * 0.45; chestX -= pitch * 0.45;
@@ -442,9 +445,14 @@ export class Humanoid {
       knL += buckle * 0.7; knR += buckle * 0.5; thL -= buckle * 0.4; thR -= buckle * 0.2;
       spineX = a.deathDir * -0.2 * e; chestX = 0;
       poseArms = { shX: -a.deathDir * 1.2 * e, shZ: 0.5 + e * 0.6, elX: -0.3 };
+    } else if (a.flip) {
+      // flips rotate about the hips (centre of mass), not the feet
+      const py = 0.95, th = a.flip;
+      this.body.rotation.x = th;
+      this.body.position.set(0, py * (1 - Math.cos(th)), -py * Math.sin(th));
     } else {
       this.body.rotation.x = 0;
-      this.body.position.y = 0;
+      this.body.position.set(0, 0, 0);
     }
 
     this.hips.position.y = hipY;
@@ -528,7 +536,9 @@ export class Humanoid {
       ];
       let p = K[0].p, r = K[0].r;
       let twist = 0;
-      if (a.swing >= 0) {
+      if (a.swordOverride) {
+        p = a.swordOverride.p; r = a.swordOverride.r; twist = a.swordOverride.tw || 0;
+      } else if (a.swing >= 0) {
         const v = a.swingVariant;
         const keys = v === 0 ? [
           { t: 0, p: [-0.21, -0.32, 0.25], r: [-0.75, 0.15, 0.0], tw: 0 },
@@ -553,6 +563,7 @@ export class Humanoid {
       }
       this.spine.rotation.y += twist;
       this._setMount(p[0], p[1] + Math.sin(ph * 2) * 0.01 * wk, p[2], r[0], r[1], r[2]);
+      if (a.twirl) this.mount.rotateX(a.twirl); // flourish: blade spins around the grip
       this.mount.updateMatrix();
       this._gR.copy(this.weaponModel.userData.gripR).applyMatrix4(this.mount.matrix);
       this._palm(this._gR, SH_R);

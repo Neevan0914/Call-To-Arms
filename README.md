@@ -53,7 +53,8 @@ the pause menu (**Esc**) if the frame rate drops.
 | Move / sprint / jump / crouch | `WASD` / `Shift` / `Space` / `C` |
 | Look | Mouse |
 | Aim | Right mouse |
-| Fire / sabre slash | Left mouse |
+| Fire / sabre attack | Left mouse (keep clicking for the 4-hit combo: slash, backhand, spinning slash, flip slam) |
+| Sabre acrobatics | `Space` with the sabre drawn: front flip when moving, back flip when standing; click mid-air for a spinning air attack |
 | Reload | `R` |
 | Switch weapon | `1` rifle, `2` sabre, `3` Rkm M28, or mouse wheel |
 | Interact | `E` |

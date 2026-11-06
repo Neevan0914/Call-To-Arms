@@ -3,6 +3,7 @@ import { Humanoid, UNIFORMS } from './humanoid.js';
 import { WEAPONS, buildRifle, buildLMG, buildSword, buildScabbard } from './weapons.js';
 import { clamp, damp, dampAngle, rand } from '../core/utils.js';
 import { BOUND } from '../world/terrain.js';
+import { SwordPlay } from './swordplay.js';
 
 export class Player {
   constructor(game) {
@@ -41,6 +42,8 @@ export class Player {
     this.reloadT = -1;
     this.swingT = -1;
     this.swingVariant = 0;
+    this.sword = new SwordPlay(this);
+    this.spinYaw = 0;
     this.meleeDone = false;
     this.sinceShot = 10;
     this.bloom = 0;
@@ -64,6 +67,7 @@ export class Player {
     this.current = id;
     this.swingT = -1;
     this.h.a.swing = -1;
+    this.sword?.cancel();
     this.h.setWeaponModel(id === 'none' ? null : this.models[id]);
     this.h.setBackModel(this.weapons.rifle.has && id !== 'rifle' ? this.models.rifleBack : null, 0);
     this.h.setBackModel(this.weapons.lmg.has && id !== 'lmg' ? this.models.lmgBack : null, 1);
@@ -127,6 +131,7 @@ export class Player {
     this.h.root.rotation.y = yaw;
     this.reloadT = -1; this.h.a.reload = -1;
     this.swingT = -1; this.h.a.swing = -1;
+    this.sword.cancel();
   }
 
   update(dt) {
@@ -160,13 +165,14 @@ export class Player {
     }
     const moving = mx !== 0 || mz !== 0;
     this.aiming = ctrl && inp.mouse.right && isGun && this.reloadT < 0;
-    this.sprinting = ctrl && inp.down('ShiftLeft') && mz > 0 && !this.aiming && this.swingT < 0;
+    this.sprinting = ctrl && inp.down('ShiftLeft') && mz > 0 && !this.aiming && !this.sword.active;
     if (this.sprinting) this.crouchToggle = false;
     const crouch = this.crouchToggle ? 1 : 0;
     h.a.crouch = damp(h.a.crouch, crouch, 10, dt);
     let speed = 0;
     if (moving) speed = this.aiming ? 2.2 : this.sprinting ? 6.4 : 3.9;
     if (crouch) speed *= 0.5;
+    if (this.sword.active) speed *= 0.3; // moves carry their own lunges / leaps
     const rig = g.rig;
     const fx = -Math.sin(rig.yaw), fz = -Math.cos(rig.yaw);
     const rx = Math.cos(rig.yaw), rz = -Math.sin(rig.yaw);
@@ -176,7 +182,9 @@ export class Player {
     const accel = this.onGround ? 11 : 2;
     this.vel.x = damp(this.vel.x, wx * speed, accel, dt);
     this.vel.z = damp(this.vel.z, wz * speed, accel, dt);
-    if (ctrl && inp.wasPressed('Space') && this.onGround && h.a.crouch < 0.3) { this.vy = 5.2; this.onGround = false; }
+    if (ctrl && inp.wasPressed('Space') && this.onGround && h.a.crouch < 0.3 && this.current !== 'sword') { this.vy = 5.2; this.onGround = false; }
+    // sabre combat (combo, spins, flips) — runs before integration so leaps carry this frame
+    if (this.current === 'sword') this.sword.update(dt, { attack: ctrl && inp.mouse.leftPressed, jump: ctrl && inp.wasPressed('Space'), moving, onGround: this.onGround });
     this.vy -= 18 * dt;
     this.position.x += this.vel.x * dt;
     this.position.z += this.vel.z * dt;
@@ -197,16 +205,18 @@ export class Player {
     // ---- facing ----
     const camFacing = Math.atan2(fx, fz);
     const sp = this.speedXZ();
-    let target = this.yaw;
-    if (this.aiming || this.sinceShot < 1.2 || this.swingT >= 0 || (this.current !== 'none' && ctrl && inp.mouse.left)) target = camFacing;
-    else if (sp > 0.3) target = Math.atan2(this.vel.x, this.vel.z);
-    this.yaw = dampAngle(this.yaw, target, this.aiming || this.swingT >= 0 ? 22 : 10, dt);
-    h.root.rotation.y = this.yaw;
+    if (!this.sword.active) { // during a sabre move the facing is locked to the move's direction
+      let target = this.yaw;
+      if (this.aiming || this.sinceShot < 1.2 || (this.current !== 'none' && this.current !== 'sword' && ctrl && inp.mouse.left)) target = camFacing;
+      else if (sp > 0.3) target = Math.atan2(this.vel.x, this.vel.z);
+      this.yaw = dampAngle(this.yaw, target, this.aiming ? 22 : 10, dt);
+    }
+    h.root.rotation.y = this.yaw + this.spinYaw;
 
     h.a.speed = sp;
     const wantAim = this.aiming ? 1 : isGun && this.sinceShot < 0.7 ? 0.85 : 0;
     h.a.aim = damp(h.a.aim, wantAim, 14, dt);
-    h.a.pitch = damp(h.a.pitch, wantAim > 0 || this.swingT >= 0 ? rig.pitch + 0.03 : 0, 12, dt);
+    h.a.pitch = damp(h.a.pitch, wantAim > 0 ? rig.pitch + 0.03 : 0, 12, dt);
 
     // ---- weapons ----
     this.fireCd -= dt;
@@ -237,20 +247,6 @@ export class Player {
         }
         if (inp.wasPressed('KeyR') && w.mag < def.mag && w.reserve > 0 && this.reloadT < 0) this.startReload(def);
       }
-    } else if (this.current === 'sword') {
-      if (ctrl && inp.mouse.leftPressed && this.swingT < 0) {
-        this.swingT = 0;
-        this.swingVariant = 1 - this.swingVariant;
-        h.a.swingVariant = this.swingVariant;
-        this.meleeDone = false;
-        g.audio.swing();
-      }
-      if (this.swingT >= 0) {
-        this.swingT += dt / def.swing;
-        h.a.swing = Math.min(1, this.swingT);
-        if (!this.meleeDone && this.swingT > 0.42) { this.meleeDone = true; this.meleeHit(def); }
-        if (this.swingT >= 1) { this.swingT = -1; h.a.swing = -1; }
-      }
     }
 
     // ---- interaction ----
@@ -263,6 +259,17 @@ export class Player {
     }
     this._stepPhase = h.a.phase / Math.PI;
     h.update(dt);
+    this._swordTrail();
+  }
+
+  // feed the blade's arc to the trail ribbon while a sabre move is playing
+  _swordTrail() {
+    const m = this.h.weaponModel, ud = m && m.userData;
+    if (!this.sword.active || !ud || ud.type !== 'sword') return;
+    m.updateWorldMatrix(true, false);
+    const tip = (this._swTip || (this._swTip = new THREE.Vector3())).copy(ud.tip).applyMatrix4(m.matrixWorld);
+    const base = (this._swBase || (this._swBase = new THREE.Vector3())).copy(ud.gripR).lerp(ud.tip, 0.15).applyMatrix4(m.matrixWorld);
+    this.game.effects.swordTrail(base, tip);
   }
 
   surface() {
@@ -315,26 +322,5 @@ export class Player {
     g.alertEnemies(this.position, 70);
     if (def.id === 'rifle' && w.mag === 0 && w.reserve > 0) setTimeout(() => { if (this.current === 'rifle' && this.reloadT < 0) this.startReload(def); }, 500);
     g.hud.updateWeapon(this);
-  }
-
-  meleeHit(def) {
-    const g = this.game;
-    const fwd = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
-    let hitAny = false;
-    for (const a of g.actors) {
-      if (a === this || !a.alive || a.faction === this.faction) continue;
-      const d = this._v.subVectors(a.position, this.position);
-      d.y = 0;
-      const dist = d.length();
-      if (dist > def.range) continue;
-      d.normalize();
-      if (d.dot(fwd) < 0.3) continue;
-      const p = a.aimPoint(new THREE.Vector3());
-      const killed = a.takeDamage(def.damage, this, p, fwd, 'chest', true);
-      g.audio.slash(p);
-      g.hud.hitmarker(killed);
-      hitAny = true;
-    }
-    if (hitAny) g.rig.addTrauma(0.15);
   }
 }

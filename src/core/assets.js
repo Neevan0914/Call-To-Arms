@@ -32,7 +32,7 @@ export const ASSET_FILES = {
 
 // Ground texture sets (albedo + OpenGL normal map, ~1 m per tile) and the sky panorama.
 export const TEXTURE_SETS = ['grass', 'dirt', 'forest_floor', 'rock', 'moss', 'gravel'];
-export const SKY_FILES = { ldr: 'assets/sky/sky_morning.jpg', hdr: 'assets/sky/sky_morning_1k.hdr' };
+export const SKY_FILES = { ldr: 'assets/sky/sky_morning.jpg', hdr: 'assets/sky/sky_morning_2k.hdr' };
 
 export function assetUrl(path) {
   const embedded = (typeof window !== 'undefined' && window.__CTA_ASSETS) || null;

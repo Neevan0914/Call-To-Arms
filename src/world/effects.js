@@ -179,6 +179,107 @@ export class Effects {
     this.moteT = 0;
     this.motesAlpha = 0.35;
     this._v = new THREE.Vector3();
+
+    // sabre trail: a ribbon between recent (base, tip) samples of the blade
+    {
+      const N = this.swN = 40;
+      const geo = new THREE.BufferGeometry();
+      this.swPos = new Float32Array(N * 2 * 3);
+      this.swAlpha = new Float32Array(N * 2);
+      geo.setAttribute('position', new THREE.BufferAttribute(this.swPos, 3).setUsage(THREE.DynamicDrawUsage));
+      geo.setAttribute('aA', new THREE.BufferAttribute(this.swAlpha, 1).setUsage(THREE.DynamicDrawUsage));
+      const idx = [];
+      for (let i = 0; i < N - 1; i++) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+      geo.setIndex(idx);
+      const mat = new THREE.ShaderMaterial({
+        transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+        uniforms: { uCol: { value: new THREE.Color(1.6, 1.75, 2.0) } },
+        vertexShader: 'attribute float aA; varying float vA; varying float vEdge; void main(){ vA = aA; vEdge = float(gl_VertexID % 2); gl_Position = projectionMatrix * viewMatrix * vec4(position,1.0); }',
+        fragmentShader: 'uniform vec3 uCol; varying float vA; varying float vEdge; void main(){ float e = smoothstep(0.0, 0.85, vEdge); gl_FragColor = vec4(uCol * vA * e * e, 1.0); }',
+      });
+      this.swMesh = new THREE.Mesh(geo, mat);
+      this.swMesh.frustumCulled = false; this.swMesh.renderOrder = 4; this.swMesh.visible = false;
+      scene.add(this.swMesh);
+      this.swSamples = []; // { b, t, age }
+      this.swLife = 0.16;
+    }
+    // ground shock ring for slams
+    {
+      const c = document.createElement('canvas'); c.width = c.height = 128;
+      const ctx = c.getContext('2d');
+      const g = ctx.createRadialGradient(64, 64, 30, 64, 64, 64);
+      g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.7, 'rgba(255,255,255,0.9)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, 128, 128);
+      const ringGeo = new THREE.PlaneGeometry(1, 1); ringGeo.rotateX(-Math.PI / 2);
+      this.rings = [];
+      for (let i = 0; i < 3; i++) {
+        const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), color: 0xb8a68a, transparent: true, opacity: 0, depthWrite: false, fog: true }));
+        m.visible = false; m.renderOrder = 2; scene.add(m);
+        this.rings.push({ mesh: m, t: 1 });
+      }
+    }
+  }
+
+  // Record the blade this frame (null = blade not swinging; trail just fades out).
+  swordTrail(base, tip) {
+    if (base) {
+      const S = this.swSamples;
+      const last = S[S.length - 1];
+      // insert interpolated samples on fast frames so arcs stay round
+      if (last && last.age < 0.05) {
+        const gap = last.t.distanceTo(tip);
+        const n = Math.min(4, Math.floor(gap / 0.12));
+        for (let i = 1; i <= n; i++) {
+          const k = i / (n + 1);
+          S.push({ b: last.b.clone().lerp(base, k), t: last.t.clone().lerp(tip, k), age: 0 });
+        }
+      }
+      S.push({ b: base.clone(), t: tip.clone(), age: 0 });
+      while (S.length > this.swN) S.shift();
+    }
+  }
+
+  _updateSwordTrail(dt) {
+    const S = this.swSamples;
+    for (const s of S) s.age += dt;
+    while (S.length && S[0].age > this.swLife) S.shift();
+    if (S.length < 2) { this.swMesh.visible = false; return; }
+    const P = this.swPos, A = this.swAlpha, N = this.swN;
+    const n = S.length;
+    for (let i = 0; i < N; i++) {
+      const s = S[Math.min(i, n - 1)];
+      const a = i < n ? Math.pow(1 - s.age / this.swLife, 1.6) * Math.min(1, (i + 1) / 3) : 0;
+      // trail hugs the outer 60% of the blade
+      const bx = s.b.x + (s.t.x - s.b.x) * 0.4, by = s.b.y + (s.t.y - s.b.y) * 0.4, bz = s.b.z + (s.t.z - s.b.z) * 0.4;
+      P[i * 6] = bx; P[i * 6 + 1] = by; P[i * 6 + 2] = bz;
+      P[i * 6 + 3] = s.t.x; P[i * 6 + 4] = s.t.y; P[i * 6 + 5] = s.t.z;
+      A[i * 2] = a * 0.55; A[i * 2 + 1] = a * 0.55;
+    }
+    const g = this.swMesh.geometry;
+    g.attributes.position.needsUpdate = true;
+    g.attributes.aA.needsUpdate = true;
+    this.swMesh.visible = true;
+  }
+
+  // Sabre slam: dust ring, flying clods, a flash and an expanding ground shock ring.
+  slam(p) {
+    const y = p.y + 0.05;
+    for (let i = 0; i < 36; i++) {
+      const a = (i / 36) * 6.28 + rand(-0.1, 0.1), sp = rand(4, 8);
+      this.smoke.emit(p.x + Math.cos(a) * 0.4, y + rand(0, 0.2), p.z + Math.sin(a) * 0.4, Math.cos(a) * sp, rand(0.3, 1.2), Math.sin(a) * sp,
+        rand(0.9, 1.6), rand(0.25, 0.4), rand(1.4, 2.2), 0.46, 0.4, 0.31, 0.5, 3.2, -0.1);
+    }
+    for (let i = 0; i < 22; i++) {
+      const a = Math.random() * 6.28;
+      this.smoke.emit(p.x, y + 0.1, p.z, Math.cos(a) * rand(1.5, 5), rand(3, 7), Math.sin(a) * rand(1.5, 5), rand(0.6, 1.1), 0.06, 0.05, 0.2, 0.15, 0.1, 1, 0.3, 14);
+    }
+    for (let i = 0; i < 14; i++) {
+      const a = Math.random() * 6.28;
+      this.add.emit(p.x, y + 0.2, p.z, Math.cos(a) * rand(3, 8), rand(1, 4), Math.sin(a) * rand(3, 8), rand(0.12, 0.3), 0.05, 0.01, 5, 3.6, 2.2, 1, 0.6, 9.8);
+    }
+    this.flashLight(this._v.set(p.x, p.y + 0.6, p.z), 14, 0.12, 0xe0e8ff, 7);
+    const R = this.rings.find((r) => r.t >= 1) || this.rings[0];
+    R.t = 0; R.mesh.position.set(p.x, y + 0.03, p.z); R.mesh.visible = true;
   }
 
   setScale(renderer, camera) {
@@ -381,6 +482,15 @@ export class Effects {
       vy = ((vy % 6) + 6) % 6;
       mp[i * 3 + 1] = cp.y - 1.5 + vy;
       this.motes.col[i * 4 + 3] = this.motesAlpha * (0.5 + Math.sin(this.moteT * 1.5 + i) * 0.5);
+    }
+    this._updateSwordTrail(dt);
+    for (const R of this.rings) {
+      if (R.t >= 1) continue;
+      R.t = Math.min(1, R.t + dt / 0.55);
+      const e = 1 - Math.pow(1 - R.t, 3);
+      R.mesh.scale.setScalar(0.6 + e * 7.5);
+      R.mesh.material.opacity = 0.7 * (1 - R.t);
+      if (R.t >= 1) R.mesh.visible = false;
     }
     this.add.update(dt);
     this.smoke.update(dt);
