@@ -401,6 +401,7 @@ export const ChapterTwo = {
   async walkOut() {
     const g = this.g, p = g.player, K = g.kfort, S = K.spots, A = g.audio;
     this.phase = 'keepWalk';
+    K.glow(true);
     A.setMood('sad');
     g.hud.setObjective('Find the General');
     g.hud.setMarker(S.general.clone().add(V(0, 2.1, 0)));

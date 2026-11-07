@@ -225,6 +225,13 @@ export class Terrain {
         this.splat[i * 3] = dirt;
         this.splat[i * 3 + 1] = forest * (1 - dirt) * 0.9;
         this.grassDensity[i] = (1 - dirt) * (1 - 0.55 * forest) * (fd < FORT.half - 1 ? 0.25 : 1);
+        // Kharsk Keep: a bare, trodden courtyard (and no grass through the cell floor)
+        const kd = this.kfortDist(x, z);
+        if (kd < KFORT.half + 2) {
+          const kw = 1 - smoothstep(KFORT.half - 3, KFORT.half + 2, kd);
+          this.splat[i * 3] = Math.max(this.splat[i * 3], kw * clamp(0.75 + this.noise.noise(x * 0.15, z * 0.15) * 0.3, 0, 1));
+          this.grassDensity[i] *= 1 - kw;
+        }
       }
     }
     // rock on steep slopes

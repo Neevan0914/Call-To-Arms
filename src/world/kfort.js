@@ -372,8 +372,11 @@ export class KharzanFort {
       const f = F[this._lit];
       effects.addFire(f.p.clone().setY(f.p.y + f.y), f.s);
     }
-    this.burning = 1;
   }
+
+  // the orange glow over the burning keep (point lights ignore walls, so it is kept
+  // off while the camera is inside the cell)
+  glow(on = true) { this.burning = on ? 1 : 0; if (!on && this.fireLight) this.fireLight.intensity = 0; }
 
   openCellDoor(fast = true) { this.doorTarget = 1; this.doorFast = fast; }
 
