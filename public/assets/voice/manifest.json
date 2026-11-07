@@ -180,11 +180,197 @@
    "cast": "kharzanOfficer",
    "text": "Hm. This one's still breathing… Velmoran. Seventh Company."
   },
-  "kharzanOfficer_606981fb": {
-   "file": "kharzanOfficer_606981fb.mp3",
-   "dur": 4.85,
+  "kharzanOfficer_c639cdd3": {
+   "file": "kharzanOfficer_c639cdd3.mp3",
+   "dur": 3.38,
    "cast": "kharzanOfficer",
-   "text": "Take him alive. The Marshal will want to meet the man who walked out of the Thornwood."
+   "text": "Take him alive. The Marshal will want to question him."
+  },
+  "marshal_c3eeb012": {
+   "file": "marshal_c3eeb012.mp3",
+   "dur": 5.21,
+   "cast": "marshal",
+   "text": "Ah… you're awake. Good. I was beginning to think my men had been too enthusiastic."
+  },
+  "marshal_0c088383": {
+   "file": "marshal_0c088383.mp3",
+   "dur": 5.86,
+   "cast": "marshal",
+   "text": "Fort Velmar is ash. Your captain is dead. And you, my friend, are all that is left of it."
+  },
+  "marshal_244d6f07": {
+   "file": "marshal_244d6f07.mp3",
+   "dur": 3.48,
+   "cast": "marshal",
+   "text": "So I will ask you one question… and I will ask it only once."
+  },
+  "marshal_63c4e006": {
+   "file": "marshal_63c4e006.mp3",
+   "dur": 3.67,
+   "cast": "marshal",
+   "text": "Where are Velmoran Headquarters? Tell me… or die."
+  },
+  "you_52d967c9": {
+   "file": "you_52d967c9.mp3",
+   "dur": 3.46,
+   "cast": "you",
+   "text": "I don't know. I can't even remember my own name."
+  },
+  "you_f90d995e": {
+   "file": "you_f90d995e.mp3",
+   "dur": 3.77,
+   "cast": "you",
+   "text": "Corran Mill. East, past the river crossing."
+  },
+  "you_458f695b": {
+   "file": "you_458f695b.mp3",
+   "dur": 1.44,
+   "cast": "you",
+   "text": "Go to hell."
+  },
+  "marshal_8fc2b707": {
+   "file": "marshal_8fc2b707.mp3",
+   "dur": 5.14,
+   "cast": "marshal",
+   "text": "No memory? How convenient. Men remember quickly… when the alternative is a bullet."
+  },
+  "marshal_b146817e": {
+   "file": "marshal_b146817e.mp3",
+   "dur": 5.06,
+   "cast": "marshal",
+   "text": "Corran Mill burned a month ago, boy. By my order. Lie to someone who was not there."
+  },
+  "marshal_68d5fa45": {
+   "file": "marshal_68d5fa45.mp3",
+   "dur": 2.93,
+   "cast": "marshal",
+   "text": "Hell? Look around you. You are already there."
+  },
+  "marshal_315fa9a5": {
+   "file": "marshal_315fa9a5.mp3",
+   "dur": 3.58,
+   "cast": "marshal",
+   "text": "Silence. The bravest answer… and the most foolish."
+  },
+  "marshal_7ab75b62": {
+   "file": "marshal_7ab75b62.mp3",
+   "dur": 2.69,
+   "cast": "marshal",
+   "text": "Enough. Sergeant — take him outside. Make it quick."
+  },
+  "kharzan_e92ebf34": {
+   "file": "kharzan_e92ebf34.mp3",
+   "dur": 2.83,
+   "cast": "kharzan",
+   "text": "Marshal! Listen — aircraft, from the south!"
+  },
+  "marshal_8fed471b": {
+   "file": "marshal_8fed471b.mp3",
+   "dur": 3.62,
+   "cast": "marshal",
+   "text": "Velmoran bombers? This far north? That's impossible—"
+  },
+  "marshal_cc4efa01": {
+   "file": "marshal_cc4efa01.mp3",
+   "dur": 3.17,
+   "cast": "marshal",
+   "text": "Wait— wait! I surrender! I can give you names, positions—"
+  },
+  "you_1b3f1242": {
+   "file": "you_1b3f1242.mp3",
+   "dur": 1.2,
+   "cast": "you",
+   "text": "He was surrendering!"
+  },
+  "lieutenant_ae7f3562": {
+   "file": "lieutenant_ae7f3562.mp3",
+   "dur": 2.21,
+   "cast": "lieutenant",
+   "text": "Orders. No prisoners."
+  },
+  "lieutenant_d0a7343a": {
+   "file": "lieutenant_d0a7343a.mp3",
+   "dur": 3.48,
+   "cast": "lieutenant",
+   "text": "On your feet, Seventh. The General wants a word with you."
+  },
+  "soldier_413db347": {
+   "file": "soldier_413db347.mp3",
+   "dur": 1.9,
+   "cast": "soldier",
+   "text": "Burn it! Burn all of it!"
+  },
+  "lieutenant_bfe93352": {
+   "file": "lieutenant_bfe93352.mp3",
+   "dur": 2.35,
+   "cast": "lieutenant",
+   "text": "Torch the barracks — nothing left standing!"
+  },
+  "scout_18938bcb": {
+   "file": "scout_18938bcb.mp3",
+   "dur": 2.14,
+   "cast": "scout",
+   "text": "Please — please, I have a family—"
+  },
+  "you_c7e4fb35": {
+   "file": "you_c7e4fb35.mp3",
+   "dur": 1.44,
+   "cast": "you",
+   "text": "They're executing them…"
+  },
+  "general_b805b729": {
+   "file": "general_b805b729.mp3",
+   "dur": 4.63,
+   "cast": "general",
+   "text": "So. You're the one from Fort Velmar. The only one, from what I hear."
+  },
+  "you_d947f279": {
+   "file": "you_d947f279.mp3",
+   "dur": 2.42,
+   "cast": "you",
+   "text": "You came for me… all of this… for me?"
+  },
+  "general_bb2d811a": {
+   "file": "general_bb2d811a.mp3",
+   "dur": 2.62,
+   "cast": "general",
+   "text": "For you? Son… we came for these."
+  },
+  "general_541ecff8": {
+   "file": "general_541ecff8.mp3",
+   "dur": 7.2,
+   "cast": "general",
+   "text": "Kharzan war plans. Every division, every depot, their whole spring offensive… from here to the coast."
+  },
+  "you_c9b12c46": {
+   "file": "you_c9b12c46.mp3",
+   "dur": 2.83,
+   "cast": "you",
+   "text": "And the men in there? They surrendered."
+  },
+  "general_9f4d2a7e": {
+   "file": "general_9f4d2a7e.mp3",
+   "dur": 2.35,
+   "cast": "general",
+   "text": "Prisoners talk. Ashes don't."
+  },
+  "general_a0b027d1": {
+   "file": "general_a0b027d1.mp3",
+   "dur": 5.4,
+   "cast": "general",
+   "text": "You were a convenient excuse, soldier. A rescue gives the men something to believe in."
+  },
+  "general_11c35f11": {
+   "file": "general_11c35f11.mp3",
+   "dur": 3.82,
+   "cast": "general",
+   "text": "After all… why risk so many soldiers' lives for one man?"
+  },
+  "youThought_66cd0d72": {
+   "file": "youThought_66cd0d72.mp3",
+   "dur": 2.16,
+   "cast": "youThought",
+   "text": "(…Whose war am I fighting?)"
   }
  }
 }
