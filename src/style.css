@@ -144,3 +144,17 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0.05em 0.4em; margin: 0 
 #endStats { display: flex; gap: 34px; margin: 18px 0; font: 600 12px 'Inter'; letter-spacing: 0.15em; color: var(--dim); }
 #endStats b { display: block; font: 600 26px 'Inter'; color: var(--text); letter-spacing: 0; }
 .tbc { font: 500 italic 18px 'Cinzel', serif; color: var(--accent); letter-spacing: 0.15em; margin: 6px 0 18px; }
+
+/* dialogue choices */
+#choices { position: fixed; left: 50%; bottom: 12vh; transform: translateX(-50%); width: min(620px, calc(100vw - 32px)); z-index: 8; display: flex; flex-direction: column; gap: 8px; }
+#choices.hidden { display: none; }
+#choices .q { text-align: center; font: 600 17px 'Inter'; color: #e08a7a; text-shadow: 0 2px 6px rgba(0,0,0,0.9); margin-bottom: 4px; }
+#choices .opts { display: flex; flex-direction: column; gap: 6px; }
+#choices button { all: unset; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 6px; background: rgba(10, 13, 11, 0.62); border: 1px solid var(--border); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); font: 500 15px 'Inter'; color: var(--text); transition: background 0.15s, border-color 0.15s, transform 0.15s; }
+#choices button:hover, #choices button.sel { background: rgba(216, 183, 101, 0.18); border-color: rgba(216, 183, 101, 0.6); }
+#choices button.sel { transform: translateX(6px); }
+#choices button kbd { min-width: 22px; text-align: center; }
+#choices button .act { color: var(--dim); font-style: italic; }
+#choices .timer { height: 3px; border-radius: 2px; background: rgba(255,255,255,0.12); overflow: hidden; margin-top: 2px; }
+#choices .timer .fill { height: 100%; width: 100%; background: var(--red); transform-origin: left; }
+@media (max-width: 600px) { #choices button { font-size: 14px; padding: 12px; } }

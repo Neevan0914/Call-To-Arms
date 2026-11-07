@@ -4,7 +4,7 @@ import { mulberry32 } from '../core/noise.js';
 import { FORT } from './terrain.js';
 
 // Box geometry with world-scale box-projected UVs (so textures don't stretch).
-function boxUV(w, h, d, scale = 1.5) {
+export function boxUV(w, h, d, scale = 1.5) {
   const g = new THREE.BoxGeometry(w, h, d);
   const p = g.attributes.position, n = g.attributes.normal, uv = g.attributes.uv;
   for (let i = 0; i < p.count; i++) {
@@ -17,7 +17,7 @@ function boxUV(w, h, d, scale = 1.5) {
   return g;
 }
 
-class Batcher {
+export class Batcher {
   constructor() { this.lists = new Map(); }
   add(geo, mat, matrix) {
     let l = this.lists.get(mat);
@@ -36,7 +36,7 @@ class Batcher {
 }
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _s = new THREE.Vector3(), _p = new THREE.Vector3();
-function M(x, y, z, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1) {
+export function M(x, y, z, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1) {
   _e.set(rx, ry, rz); _q.setFromEuler(_e); _p.set(x, y, z); _s.set(sx, sy, sz);
   return _m.compose(_p, _q, _s).clone();
 }

@@ -307,6 +307,14 @@ export class Soldier {
     this.yaw = dampAngle(this.yaw, desiredYaw, faceTarget ? 9 : 6, dt);
     h.root.rotation.y = this.yaw;
 
+    // scripted aim (cutscenes): hold the weapon up toward lookAt
+    if (this.aimHold) {
+      aimWant = Math.max(aimWant, this.aimHold);
+      if (!faceTarget && this.lookAt) {
+        const e = this._eye(this._a);
+        h.a.pitch = damp(h.a.pitch, Math.atan2(this.lookAt.y - e.y, Math.hypot(this.lookAt.x - e.x, this.lookAt.z - e.z)), 6, dt);
+      }
+    }
     // ---- anim params ----
     h.a.speed = Math.min(this.speedNow, 7);
     h.a.aim = damp(h.a.aim, aimWant, 6, dt);
@@ -317,7 +325,7 @@ export class Soldier {
       h.a.pitch = damp(h.a.pitch, Math.atan2(tp.y - e.y, Math.hypot(tp.x - e.x, tp.z - e.z)), 6, dt);
       h.a.lookTarget = null;
     } else {
-      h.a.pitch = damp(h.a.pitch, 0, 4, dt);
+      if (!this.aimHold) h.a.pitch = damp(h.a.pitch, 0, 4, dt);
       h.a.lookTarget = this.lookAt;
     }
     if (!far || this.h.root.visible) h.update(dt);

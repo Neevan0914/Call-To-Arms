@@ -97,6 +97,7 @@ export class Humanoid {
       speed: 0, crouch: 0, aim: 0, pitch: 0, weapon: 'none', swing: -1, swingVariant: 0, recoil: 0, reload: -1,
       lookTarget: null, talk: 0, phase: Math.random() * 6, getup: -1, hurt: 0, dead: false, deathT: 0, deathDir: 1,
       thrust: -1, wave: 0, salute: 0, offer: 0, flip: 0, tuck: 0, twirl: 0, moveCrouch: 0, swordOverride: null,
+      sit: 0, bound: 0, handsUp: 0, slump: 0, kneel: 0,
     };
     this.walk = 0;
     this.t = Math.random() * 10;
@@ -403,6 +404,23 @@ export class Humanoid {
     // acrobatics: legs tucked to the chest mid-flip
     const tuck = a.tuck || 0;
     if (tuck) { thL -= 1.7 * tuck; thR -= 1.6 * tuck; knL += 2.3 * tuck; knR += 2.2 * tuck; spineX += 0.55 * tuck; }
+    // seated (on a chair): thighs level, shins down, hips at seat height
+    if (a.sit) {
+      const k = a.sit;
+      hipY = lerp(hipY, 0.5, k);
+      thL = lerp(thL, -1.5, k); thR = lerp(thR, -1.42, k);
+      knL = lerp(knL, 1.42, k); knR = lerp(knR, 1.55, k);
+      spineX += 0.06 * k;
+    }
+    // kneeling on both knees
+    if (a.kneel) {
+      const k = a.kneel;
+      hipY = lerp(hipY, 0.5, k);
+      thL = lerp(thL, -0.1, k); thR = lerp(thR, -0.12, k);
+      knL = lerp(knL, 1.65, k); knR = lerp(knR, 1.62, k);
+      spineX += 0.12 * k;
+    }
+    if (a.slump) spineX += 0.32 * a.slump;
     // aim pitch
     const pitch = clamp(a.pitch, -1.1, 1.1);
     spineX -= pitch * 0.45; chestX -= pitch * 0.45;
@@ -478,6 +496,7 @@ export class Humanoid {
     const talkNod = a.talk > 0 ? Math.sin(this.t * 8.5) * 0.045 + Math.sin(this.t * 3.1) * 0.03 : 0;
     this.neck.rotation.set(-this._lookPitch * 0.5 + talkNod + (dead ? 0 : -pitch * 0.1), this._lookYaw * 0.55, 0);
     this.head.rotation.set(-this._lookPitch * 0.5, this._lookYaw * 0.45, a.talk > 0 ? Math.sin(this.t * 2.3) * 0.04 : 0);
+    if (a.slump) { this.neck.rotation.x += 0.45 * a.slump; this.head.rotation.x += 0.3 * a.slump; this.head.rotation.z += 0.12 * a.slump; }
 
     // ---- arms & weapon ----
     const w = a.weapon;
@@ -576,9 +595,19 @@ export class Humanoid {
       if (a.offer > 0) { rS = lerp(rS, -1.1, a.offer); rBend = lerp(rBend, 0.4, a.offer); lS = lerp(lS, -1.0, a.offer); lBend = lerp(lBend, 0.5, a.offer); }
       if (a.wave > 0) { rS = lerp(rS, -2.6, a.wave); rOut = a.wave * 0.3; rBend = lerp(rBend, 0.6 + Math.sin(this.t * 9) * 0.35, a.wave); }
       if (a.talk > 0) { lS += Math.sin(this.t * 2.2) * 0.12 - 0.2; lBend = 0.9 + Math.sin(this.t * 3.1) * 0.25; }
+      if (a.handsUp > 0) {
+        const k = a.handsUp, tr = Math.sin(this.t * 17) * 0.03 * k; // trembling
+        lS = lerp(lS, -2.55 + tr, k); rS = lerp(rS, -2.55 - tr, k);
+        lOut = lerp(lOut, 0.45, k); rOut = lerp(rOut, 0.45, k);
+        lBend = lerp(lBend, 1.1, k); rBend = lerp(rBend, 1.1, k);
+      }
       this._freeArm(this.shL, this.elL, 1, lS, lOut, lBend);
       this._freeArm(this.shR, this.elR, -1, rS, rOut, rBend);
-      if (this.cfg.helmet === 'cap' && a.talk <= 0 && a.wave <= 0) {
+      if (a.bound > 0) {
+        // wrists tied behind the back
+        this._freeArm(this.shL, this.elL, 1, 0.55, -0.16, 1.5);
+        this._freeArm(this.shR, this.elR, -1, 0.55, -0.16, 1.5);
+      } else if (this.cfg.helmet === 'cap' && a.talk <= 0 && a.wave <= 0 && a.handsUp <= 0 && a.offer <= 0) {
         // officer: hands behind back
         this._freeArm(this.shL, this.elL, 1, 0.45, -0.05, 1.3);
         this._freeArm(this.shR, this.elR, -1, 0.45, -0.05, 1.3);

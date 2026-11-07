@@ -1,4 +1,4 @@
-# Call To Arms — Chapter I: *The Thornwood*
+# Call To Arms — Chapters I & II
 
 A third-person 3D action game that runs in the browser (Three.js + WebGL2). There are
 no external assets: the terrain, forest, fort, soldiers, weapons, textures, flags,
@@ -20,7 +20,24 @@ sound effects, music and voices are all generated in code when the game loads.
    on your side. The quartermaster hands you an **Rkm M28 automatic rifle**, modelled
    on the interwar RKM Browning wz. 28.
 6. **The attack.** A Kharzan assault blows open the west wall and storms the gate.
-   You fight beside the garrison, but the fort falls. *To be continued…*
+   You fight beside the garrison, but the fort falls and you are taken alive.
+
+## Story (Chapter II: *Kharsk Keep*)
+
+1. **The cell.** You wake tied to a chair in a stone cell inside Kharsk Keep, a Kharzan
+   stronghold. Marshal Dravek questions you: *"Where are Velmoran Headquarters? Tell
+   me… or die."* Pick your answer with **1–4** (or tap it): plead ignorance, lie, defy
+   him, or say nothing. If you don't answer in time, you stay silent.
+2. **The raid.** Whatever you say, the sirens start. A formation of Velmoran bombers
+   crosses the keep and the bombs walk right up to your cell.
+3. **The rescue.** A Velmoran raiding party kicks in the door and shoots the guard and
+   the surrendering Marshal. Then they cut you loose.
+4. **Ashes.** Walk out through the burning keep while the raiders torch every building
+   and shoot the last prisoners, and find the General waiting outside the gate.
+5. **The reveal.** The raid was never about you. They came for the Kharzan war plans.
+   *"After all… why risk so many soldiers' lives for one man?"* *To be continued…*
+
+Start straight at Chapter II with `?skip=keep` on the URL.
 
 ## Running it
 

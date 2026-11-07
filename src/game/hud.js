@@ -109,6 +109,51 @@ export class HUD {
     this.el.sub.classList.add('show');
   }
 
+  // Dialogue choice: resolves with the chosen index (keys 1-n, click or tap); after
+  // `timeout` seconds the `fallback` option is taken.
+  choose(question, options, { timeout = 12, fallback = options.length - 1 } = {}) {
+    const box = $('choices');
+    box.querySelector('.q').textContent = question || '';
+    const wrap = box.querySelector('.opts');
+    wrap.innerHTML = '';
+    const fill = box.querySelector('.fill');
+    return new Promise((resolve) => {
+      let done = false;
+      const pick = (i) => {
+        if (done) return;
+        done = true;
+        const b = wrap.children[i];
+        if (b) b.classList.add('sel');
+        clearInterval(tick);
+        window.removeEventListener('keydown', onKey, true);
+        setTimeout(() => { box.classList.add('hidden'); resolve(i); }, 450);
+      };
+      options.forEach((o, i) => {
+        const b = document.createElement('button');
+        b.innerHTML = `<kbd>${i + 1}</kbd><span class="${/^\[.*\]$/.test(o) ? 'act' : ''}">${o}</span>`;
+        b.addEventListener('click', (e) => { e.stopPropagation(); pick(i); });
+        b.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); pick(i); }, { passive: false });
+        wrap.appendChild(b);
+      });
+      const onKey = (e) => {
+        const n = parseInt(e.key, 10);
+        if (n >= 1 && n <= options.length) { e.preventDefault(); e.stopPropagation(); pick(n - 1); }
+      };
+      window.addEventListener('keydown', onKey, true);
+      let el = 0, last = performance.now();
+      const tick = setInterval(() => {
+        const now = performance.now();
+        if (!this.game.paused) el += now - last;
+        last = now;
+        const k = Math.min(1, el / (timeout * 1000));
+        fill.style.transform = `scaleX(${1 - k})`;
+        if (k >= 1) pick(fallback);
+      }, 50);
+      fill.style.transform = 'scaleX(1)';
+      box.classList.remove('hidden');
+    });
+  }
+
   letterbox(on) { this.el.letter.classList.toggle('on', on); }
   skipHint(on, progress = 0) {
     this.el.skip.classList.toggle('show', on);

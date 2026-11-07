@@ -292,6 +292,73 @@ export class AudioEngine {
     }
   }
 
+  // air-raid siren: rising/falling wail, heard through walls
+  siren(dur = 14, vol = 0.09) {
+    if (!this.enabled) return;
+    const ctx = this.ctx, now = ctx.currentTime;
+    const out = ctx.createGain();
+    out.gain.setValueAtTime(0.0001, now);
+    out.gain.exponentialRampToValueAtTime(vol, now + 1.5);
+    out.gain.setValueAtTime(vol, now + dur - 2.5);
+    out.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1800;
+    out.connect(lp); lp.connect(this.sfx); lp.connect(this.reverbIn);
+    for (const [type, mul] of [['sawtooth', 1], ['square', 1.005]]) {
+      const o = ctx.createOscillator(); o.type = type;
+      o.frequency.setValueAtTime(180 * mul, now);
+      for (let t = 0; t < dur; t += 5) {
+        o.frequency.linearRampToValueAtTime(620 * mul, now + t + 2.6);
+        o.frequency.linearRampToValueAtTime(300 * mul, now + t + 5);
+      }
+      const g = ctx.createGain(); g.gain.value = type === 'square' ? 0.35 : 0.6;
+      o.connect(g); g.connect(out);
+      o.start(now); o.stop(now + dur + 0.1);
+    }
+  }
+
+  // droning piston engines of a bomber formation passing overhead (swells, then fades)
+  drone(dur = 16, vol = 0.22, peakAt = 0.45) {
+    if (!this.enabled) return;
+    const ctx = this.ctx, now = ctx.currentTime;
+    const out = ctx.createGain();
+    out.gain.setValueAtTime(0.0001, now);
+    out.gain.exponentialRampToValueAtTime(vol, now + dur * peakAt);
+    out.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 700;
+    out.connect(lp); lp.connect(this.sfx);
+    for (const f of [62, 63.4, 92, 93.7, 124.5]) {
+      const o = ctx.createOscillator(); o.type = 'sawtooth';
+      o.frequency.setValueAtTime(f * 1.04, now);
+      o.frequency.linearRampToValueAtTime(f * 0.95, now + dur); // doppler-ish slide
+      const g = ctx.createGain(); g.gain.value = 0.25;
+      o.connect(g); g.connect(out);
+      o.start(now); o.stop(now + dur + 0.1);
+    }
+    const src = ctx.createBufferSource(); src.buffer = this.brown; src.loop = true;
+    const ng = ctx.createGain(); ng.gain.value = 0.6;
+    src.connect(ng); ng.connect(out);
+    src.start(now); src.stop(now + dur + 0.1);
+  }
+
+  // continuous crackle + roar of a burning compound (gain 0 stops it)
+  fireLoop(gain = 0.5) {
+    if (!this.enabled) return;
+    const ctx = this.ctx;
+    if (!this._fire) {
+      const g = ctx.createGain(); g.gain.value = 0; g.connect(this.amb);
+      const src = ctx.createBufferSource(); src.buffer = this.brown; src.loop = true;
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 500;
+      src.connect(lp); lp.connect(g); src.start();
+      this._fire = { g, crack: 0 };
+      this._fireTick = setInterval(() => {
+        if (!this._fire || this._fire.g.gain.value < 0.02) return;
+        const n = 1 + Math.floor(Math.random() * 3);
+        for (let i = 0; i < n; i++) this._noiseBurst(this._fire.g, { t0: Math.random() * 0.25, dur: rand(0.02, 0.06), type: 'bandpass', f0: rand(1500, 5000), f1: 900, q: 2, gain: rand(0.3, 0.9) });
+      }, 260);
+    }
+    this._fire.g.gain.setTargetAtTime(gain, ctx.currentTime, 1.5);
+  }
+
   heartbeat(t0 = 0, vol = 0.6) {
     if (!this.enabled) return;
     this._tone(this.sfx, { t0, dur: 0.18, f0: 70, f1: 35, gain: vol });

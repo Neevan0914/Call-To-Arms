@@ -5,6 +5,7 @@ import { CollisionWorld } from '../world/physics.js';
 import { Atmosphere } from '../world/sky.js';
 import { Vegetation, Grass, SUN_UNIFORMS } from '../world/vegetation.js';
 import { Fort } from '../world/fort.js';
+import { KharzanFort } from '../world/kfort.js';
 import { Effects } from '../world/effects.js';
 import { Post } from '../core/post.js';
 import { Input } from '../core/input.js';
@@ -121,6 +122,7 @@ export class Game {
 
     progress(0.62, 'Raising Fort Velmar…'); await nextFrame();
     this.fort = new Fort(this.scene, this.terrain, this.physics, this.T);
+    this.kfort = new KharzanFort(this, this.fort);
 
     progress(0.72, 'Mustering soldiers…'); await nextFrame();
     this.soldierTemplates = {};
@@ -330,6 +332,8 @@ export class Game {
       const cp = this.camera.position;
       for (const s of this.soldiers) if (s.h.lodMeshes) s.h.setLod(s.position.distanceTo(cp) > 30 ? 1 : 0);
       this.fort.update(dt, this.time);
+      this.kfort.update(dt, this.time);
+      if (this.raid) { this.raid.update(dt); if (this.raid.done) { this.raid.dispose(); this.raid = null; } }
       this.effects.update(dt, this.camera);
       this.rig.update(dt, realDt);
       this.hud.update(realDt);

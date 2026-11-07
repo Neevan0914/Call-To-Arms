@@ -11,7 +11,7 @@
 //   node scripts/generate-voices.mjs --refs refs/        # clean Kokoro voice sample per character
 //   node scripts/generate-voices.mjs --from-raw raw/     # apply per-character FX to raw takes
 //
-// Lines are read from src/game/story.js (this.say / this.bark calls). Each character's
+// Lines are read from src/game/story.js and chapter2.js (this.say / this.bark calls). Each character's
 // voice, speed and audio treatment come from src/game/voices.js. Requires ffmpeg.
 import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -24,7 +24,7 @@ const argOf = (k) => { const i = process.argv.indexOf(k); return i >= 0 ? proces
 const jsonOut = argOf('--json'), refsDir = argOf('--refs'), rawDir = argOf('--from-raw');
 
 // ---- collect lines ----
-const src = readFileSync('src/game/story.js', 'utf8');
+const src = ['src/game/story.js', 'src/game/chapter2.js'].map((f) => readFileSync(f, 'utf8')).join('\n');
 const lines = new Map();
 const str = `(['"])((?:\\\\.|(?!\\2).)*)\\2`;
 const unescape = (t) => t.replace(/\\(['"\\])/g, '$1');
@@ -67,6 +67,9 @@ const FX = {
   enemy: { chain: `${pitch(0.9)},equalizer=f=1300:t=q:w=1.2:g=3,${COMP}`, lufs: -17 },
   enemyFar: { chain: `${pitch(0.9)},${COMP},lowpass=f=2300,aecho=0.9:0.9:120|260:0.35|0.22`, lufs: -20 },
   officer: { chain: `${pitch(0.88)},${COMP},aecho=0.9:0.9:35:0.14`, lufs: -17 },
+  // a cold, close voice in a small stone room
+  marshal: { chain: `${pitch(0.9)},equalizer=f=160:t=q:w=1:g=2,${COMP},aecho=0.8:0.85:18|29:0.22|0.12`, lufs: -17 },
+  general: { chain: `${pitch(0.95)},equalizer=f=220:t=q:w=1:g=2,${COMP}`, lufs: -17 },
 };
 const fxChain = (fx) => `${TRIM},${FX[fx].chain},loudnorm=I=${FX[fx].lufs}:TP=-2:LRA=8,alimiter=limit=0.8:level=false,apad=pad_dur=0.15`;
 

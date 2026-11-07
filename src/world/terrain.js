@@ -5,6 +5,8 @@ import { smoothstep, lerp, clamp } from '../core/utils.js';
 export const WORLD_SIZE = 800;
 export const SEG = 320;
 export const FORT = { x: 35, z: -330, half: 32 };
+// Chapter II: the Kharzan stronghold, far north-west of the Thornwood clearing
+export const KFORT = { x: -215, z: 205, half: 30 };
 export const SPAWN = { x: 0, z: 0 };
 export const BOUND = 360;
 
@@ -86,6 +88,7 @@ export class Terrain {
     this._pq = { d: Infinity, s: 0, h: 0, i: 0 };
     this._buildPath();
     this.fortH = this.raw(FORT.x, FORT.z) + 1.5;
+    this.kfortH = this.raw(KFORT.x, KFORT.z) + 0.8;
     this.clearH = this.raw(SPAWN.x, SPAWN.z);
     this._computePathHeights();
     this._computeField();
@@ -148,12 +151,21 @@ export class Terrain {
     return q;
   }
 
-  fortDist(x, z) { return Math.max(Math.abs(x - FORT.x), Math.abs(z - FORT.z)); }
+  // distance to the nearest fort's centre (square), expressed against FORT.half so the
+  // same clearance thresholds work for both forts
+  fortDist(x, z) {
+    const a = Math.max(Math.abs(x - FORT.x), Math.abs(z - FORT.z));
+    const b = Math.max(Math.abs(x - KFORT.x), Math.abs(z - KFORT.z)) - (KFORT.half - FORT.half);
+    return Math.min(a, b);
+  }
+  kfortDist(x, z) { return Math.max(Math.abs(x - KFORT.x), Math.abs(z - KFORT.z)); }
 
   baseHeight(x, z) {
     let h = this.raw(x, z);
     const fm = 1 - smoothstep(FORT.half + 6, FORT.half + 36, this.fortDist(x, z));
     h = lerp(h, this.fortH, fm);
+    const km = 1 - smoothstep(KFORT.half + 6, KFORT.half + 34, this.kfortDist(x, z));
+    if (km > 0) h = lerp(h, this.kfortH, km);
     const dc = Math.hypot(x - SPAWN.x, z - SPAWN.z);
     h = lerp(h, this.clearH, (1 - smoothstep(8, 28, dc)) * 0.8);
     return h;

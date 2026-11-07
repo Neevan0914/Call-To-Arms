@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { FORT, SPAWN } from '../world/terrain.js';
 import { buildRifle, buildLMG, WEAPONS } from '../chars/weapons.js';
 import { rand, lerp, clamp, easeInOut, easeOut } from '../core/utils.js';
+import { ChapterTwo } from './chapter2.js';
 
 const COL = { you: '#e8d9a8', ally: '#9fc7a8', officer: '#e2c06e', enemy: '#e08a7a', qm: '#b7c9e0' };
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -190,7 +191,7 @@ export class Story {
     const s = this.g.spawnSoldier({
       faction: 'kharzan', uniform: o.coat ? 'kharzanCoat' : 'kharzan', weapon: o.weapon || 'rifle', pos, yaw: o.yaw ?? 0,
       role: o.role || 'assault', accuracy: o.accuracy ?? 0.3, damage: o.damage ?? 13, hp: o.hp ?? 100, name: o.name || 'Kharzan Soldier',
-      holdFire: o.holdFire ?? false,
+      holdFire: o.holdFire ?? false, helmet: o.helmet,
     });
     s.allyDamageScale = o.allyDamageScale ?? 1;
     return s;
@@ -313,6 +314,7 @@ export class Story {
   // ---------------- main flow ----------------
   async run(from = 'intro') {
     this.g.player.stats.start = performance.now();
+    if (from === 'keep') { await this.chapterTwo(); return; }
     const order = ['intro', 'ambush', 'path', 'fort', 'welcome', 'defend'];
     let i = Math.max(0, order.indexOf(from));
     if (i > 0) this.jumpTo(order[i]);
@@ -323,6 +325,7 @@ export class Story {
     if (i <= 4) await this.welcome();
     await this.defend();
     await this.ending();
+    await this.chapterTwo();
   }
 
   // Debug / dev: set the world state as it would be at the start of a phase.
@@ -958,15 +961,17 @@ export class Story {
       }, 9);
       await this.wait(3.2);
       await this.say('Kharzan Officer', "Hm. This one's still breathing… Velmoran. Seventh Company.", 3.8, { color: COL.enemy, voice: 'kharzanOfficer', delivery: 'menace', pitch: 0.5, rate: 0.85, actor: officer });
-      await this.say('Kharzan Officer', 'Take him alive. The Marshal will want to meet the man who walked out of the Thornwood.', 4.8, { color: COL.enemy, voice: 'kharzanOfficer', delivery: 'menace', pitch: 0.5, rate: 0.85, actor: officer });
+      await this.say('Kharzan Officer', 'Take him alive. The Marshal will want to question him.', 4.2, { color: COL.enemy, voice: 'kharzanOfficer', delivery: 'menace', pitch: 0.5, rate: 0.85, actor: officer });
       this.tween(u.uEyelid, 'value', 1, 3);
       this.tween(u.uFade, 'value', 1, 3.5);
       await this.wait(3.8);
     }, { canSkip: true });
     g.timeScale = 1;
     u.uFade.value = 1;
-    A.setMood('sad');
-    this.showEnd();
+    A.setMood('silent');
+    A.muffle = 0.5;
+    u.uBlur.value = 0; u.uDesat.value = 0; u.uRedTint.value = 0;
+    p.h.root.visible = true;
   }
 
   showEnd() {
@@ -985,3 +990,5 @@ export class Story {
     document.getElementById('endScreen').classList.remove('hidden');
   }
 }
+
+Object.assign(Story.prototype, ChapterTwo);
