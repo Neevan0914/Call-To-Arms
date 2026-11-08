@@ -371,6 +371,258 @@
    "dur": 2.16,
    "cast": "youThought",
    "text": "(…Whose war am I fighting?)"
+  },
+  "general_5b459dec": {
+   "file": "general_5b459dec.mp3",
+   "dur": 3.07,
+   "cast": "general",
+   "text": "You. Seventh. I have a job for you."
+  },
+  "general_83355af5": {
+   "file": "general_83355af5.mp3",
+   "dur": 6.98,
+   "cast": "general",
+   "text": "These plans go to Command at Hollin Ridge. East, along the old road. Two days on foot, if you don't sleep."
+  },
+  "general_54dc0562": {
+   "file": "general_54dc0562.mp3",
+   "dur": 5.83,
+   "cast": "general",
+   "text": "My men stay here to hold the ruins. You go alone. Nobody notices one soldier on a road."
+  },
+  "you_aaa38e00": {
+   "file": "you_aaa38e00.mp3",
+   "dur": 1.63,
+   "cast": "you",
+   "text": "And if I'm stopped?"
+  },
+  "general_07aeeed5": {
+   "file": "general_07aeeed5.mp3",
+   "dur": 2.47,
+   "cast": "general",
+   "text": "Then burn them. And don't get stopped."
+  },
+  "general_ebcfbaa5": {
+   "file": "general_ebcfbaa5.mp3",
+   "dur": 6.34,
+   "cast": "general",
+   "text": "One more thing, soldier. The seal stays unbroken. Those pages are for Command's eyes only."
+  },
+  "soldier_943e9378": {
+   "file": "soldier_943e9378.mp3",
+   "dur": 4.68,
+   "cast": "soldier",
+   "text": "Your sabre, and a rifle. Twenty rounds. Make them count."
+  },
+  "bandit_d1c1d72b": {
+   "file": "bandit_d1c1d72b.mp3",
+   "dur": 5.81,
+   "cast": "bandit",
+   "text": "Well, look what the road brought us. Leave the satchel, soldier, and maybe you keep your boots."
+  },
+  "bandit2_cffb33cb": {
+   "file": "bandit2_cffb33cb.mp3",
+   "dur": 0.89,
+   "cast": "bandit2",
+   "text": "Take him!"
+  },
+  "youThought_d38cea1a": {
+   "file": "youThought_d38cea1a.mp3",
+   "dur": 3.43,
+   "cast": "youThought",
+   "text": "(Command's eyes only. That's what he said.)"
+  },
+  "youThought_d49b4906": {
+   "file": "youThought_d49b4906.mp3",
+   "dur": 3.84,
+   "cast": "youThought",
+   "text": "(After Kharsk… I don't know whose eyes I trust anymore.)"
+  },
+  "youThought_cdaff2ff": {
+   "file": "youThought_cdaff2ff.mp3",
+   "dur": 3.02,
+   "cast": "youThought",
+   "text": "(Not my war to read. Just get it there.)"
+  },
+  "youThought_d404e0ab": {
+   "file": "youThought_d404e0ab.mp3",
+   "dur": 5.28,
+   "cast": "youThought",
+   "text": "(Operation Iron Tide… Hollin Ridge. They're going to hit Command.)"
+  },
+  "youThought_efc0aa54": {
+   "file": "youThought_efc0aa54.mp3",
+   "dur": 6.7,
+   "cast": "youThought",
+   "text": "(Two days on the road, and the guns open on the third. I'd walk in just in time to die with them.)"
+  },
+  "youThought_4fc96e5f": {
+   "file": "youThought_4fc96e5f.mp3",
+   "dur": 5.71,
+   "cast": "youThought",
+   "text": "(Whatever they did at Kharsk… the men at Hollin Ridge don't deserve to burn.)"
+  },
+  "youThought_acf7ff8f": {
+   "file": "youThought_acf7ff8f.mp3",
+   "dur": 4.9,
+   "cast": "youThought",
+   "text": "(They shot men on their knees. Let Command find out what that feels like.)"
+  },
+  "kharzan_f1bb83c8": {
+   "file": "kharzan_f1bb83c8.mp3",
+   "dur": 2.33,
+   "cast": "kharzan",
+   "text": "Hesk! Velmori — tarak, tarak!"
+  },
+  "bandit_9bd818ee": {
+   "file": "bandit_9bd818ee.mp3",
+   "dur": 4.32,
+   "cast": "bandit",
+   "text": "There he is — the courier! The greycoats pay gold for that satchel!"
+  },
+  "bandit2_f0c5888b": {
+   "file": "bandit2_f0c5888b.mp3",
+   "dur": 0.91,
+   "cast": "bandit2",
+   "text": "Cut him off!"
+  },
+  "you_3caacc9b": {
+   "file": "you_3caacc9b.mp3",
+   "dur": 3.7,
+   "cast": "you",
+   "text": "Kharzan bounties on couriers… just like the plans said."
+  },
+  "sentry1_b2fd75b8": {
+   "file": "sentry1_b2fd75b8.mp3",
+   "dur": 1.85,
+   "cast": "sentry1",
+   "text": "Halt! Name and unit!"
+  },
+  "you_59d42523": {
+   "file": "you_59d42523.mp3",
+   "dur": 4.58,
+   "cast": "you",
+   "text": "Seventh Company. Dispatches from General Morrow, for Command."
+  },
+  "sentry1_e3cbca5c": {
+   "file": "sentry1_e3cbca5c.mp3",
+   "dur": 2.71,
+   "cast": "sentry1",
+   "text": "Morrow's courier? Open the gate!"
+  },
+  "you_b413aa55": {
+   "file": "you_b413aa55.mp3",
+   "dur": 4.1,
+   "cast": "you",
+   "text": "From General Morrow, sir. For Command's eyes only."
+  },
+  "colonel_66682281": {
+   "file": "colonel_66682281.mp3",
+   "dur": 4.94,
+   "cast": "colonel",
+   "text": "Morrow. Of course. Put it with the others — Command will read it in the morning."
+  },
+  "you_c806a9ed": {
+   "file": "you_c806a9ed.mp3",
+   "dur": 2.35,
+   "cast": "you",
+   "text": "Sir, the General said it was—"
+  },
+  "colonel_c00cb494": {
+   "file": "colonel_c00cb494.mp3",
+   "dur": 5.95,
+   "cast": "colonel",
+   "text": "Everything Morrow sends is urgent, soldier. Get some food. Get some sleep. You've earned it."
+  },
+  "soldier_a4dd0a2a": {
+   "file": "soldier_a4dd0a2a.mp3",
+   "dur": 3.19,
+   "cast": "soldier",
+   "text": "KHARZANS! On the walls — they're everywhere!"
+  },
+  "you_de7bfd69": {
+   "file": "you_de7bfd69.mp3",
+   "dur": 5.47,
+   "cast": "you",
+   "text": "Colonel — the Kharzans are coming. Here, to Hollin Ridge. In two days."
+  },
+  "colonel_3932017e": {
+   "file": "colonel_3932017e.mp3",
+   "dur": 1.87,
+   "cast": "colonel",
+   "text": "And how would a private know that?"
+  },
+  "you_a3f1d9cf": {
+   "file": "you_a3f1d9cf.mp3",
+   "dur": 5.95,
+   "cast": "you",
+   "text": "I broke the seal. It's all in there. Operation Iron Tide."
+  },
+  "colonel_3dd28905": {
+   "file": "colonel_3dd28905.mp3",
+   "dur": 1.15,
+   "cast": "colonel",
+   "text": "…Iron Tide."
+  },
+  "colonel_39b65eb5": {
+   "file": "colonel_39b65eb5.mp3",
+   "dur": 5.28,
+   "cast": "colonel",
+   "text": "Ring the bell! Every man on the walls, every gun on the west road. Now!"
+  },
+  "colonel_272d2575": {
+   "file": "colonel_272d2575.mp3",
+   "dur": 3.96,
+   "cast": "colonel",
+   "text": "You broke a sealed order, soldier. On another night, I'd have you shot."
+  },
+  "colonel_400357a3": {
+   "file": "colonel_400357a3.mp3",
+   "dur": 4.46,
+   "cast": "colonel",
+   "text": "Tonight… you may have saved every man in this fort. What's your name?"
+  },
+  "you_83f1164b": {
+   "file": "you_83f1164b.mp3",
+   "dur": 1.66,
+   "cast": "you",
+   "text": "I… don't know, sir."
+  },
+  "general_f260005b": {
+   "file": "general_f260005b.mp3",
+   "dur": 3.48,
+   "cast": "general",
+   "text": "Back already, Seventh? Command has the plans?"
+  },
+  "you_83ddf914": {
+   "file": "you_83ddf914.mp3",
+   "dur": 3.74,
+   "cast": "you",
+   "text": "Delivered, sir. Into the Colonel's own hands."
+  },
+  "general_d6253560": {
+   "file": "general_d6253560.mp3",
+   "dur": 2.33,
+   "cast": "general",
+   "text": "Good. Then we've done our part."
+  },
+  "youThought_6dc0cd4b": {
+   "file": "youThought_6dc0cd4b.mp3",
+   "dur": 4.2,
+   "cast": "youThought",
+   "text": "(The folder's still inside my coat. The seal's still broken.)"
+  },
+  "soldier_2621e745": {
+   "file": "soldier_2621e745.mp3",
+   "dur": 7.15,
+   "cast": "soldier",
+   "text": "General! Signal from Hollin Ridge — the Kharzans hit them at dawn. They're gone, sir. Nobody saw it coming."
+  },
+  "general_314345a7": {
+   "file": "general_314345a7.mp3",
+   "dur": 2.23,
+   "cast": "general",
+   "text": "…Nobody saw it coming."
   }
  }
 }
