@@ -173,6 +173,6 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0.05em 0.4em; margin: 0 
 #document .paper p { margin: 8px 0; }
 #document .paper .hl { background: rgba(200, 60, 40, 0.22); padding: 0 2px; }
 #document .paper .sig { margin-top: 16px; text-align: right; font-style: italic; }
-#document .hint { color: var(--dim); font: 500 13px 'Inter'; }
+#document .hint { color: var(--dim); font: 500 13px 'Inter'; transition: opacity 0.6s; }
 @keyframes docIn { from { opacity: 0; transform: translateY(30px) rotate(-3deg); } to { opacity: 1; transform: rotate(-0.6deg); } }
 @media (max-width: 600px) { #document .paper { font-size: 13px; padding: 20px; } }

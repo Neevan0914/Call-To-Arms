@@ -160,6 +160,9 @@ export class HUD {
     box.querySelector('.paper').innerHTML = html;
     box.querySelector('.paper').scrollTop = 0;
     box.classList.remove('hidden');
+    const hint = box.querySelector('.hint');
+    hint.style.opacity = 0;
+    setTimeout(() => { hint.style.opacity = 1; }, minTime * 1000);
     const t0 = performance.now();
     return new Promise((resolve) => {
       const close = (e) => {
