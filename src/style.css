@@ -158,3 +158,21 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0.05em 0.4em; margin: 0 
 #choices .timer { height: 3px; border-radius: 2px; background: rgba(255,255,255,0.12); overflow: hidden; margin-top: 2px; }
 #choices .timer .fill { height: 100%; width: 100%; background: var(--red); transform-origin: left; }
 @media (max-width: 600px) { #choices button { font-size: 14px; padding: 12px; } }
+
+/* captured documents */
+#document { position: fixed; inset: 0; z-index: 9; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: radial-gradient(ellipse at center, rgba(0,0,0,0.35), rgba(0,0,0,0.82)); }
+#document.hidden { display: none; }
+#document .paper { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 90px); overflow: auto; padding: 28px 30px; color: #2a2118; background:
+  radial-gradient(ellipse at 20% 15%, rgba(255,255,255,0.35), rgba(255,255,255,0) 60%),
+  radial-gradient(ellipse at 85% 90%, rgba(120,90,50,0.25), rgba(120,90,50,0) 55%),
+  linear-gradient(175deg, #e6dcc3, #d6c8a6); border-radius: 3px; box-shadow: 0 20px 60px rgba(0,0,0,0.7), inset 0 0 50px rgba(110,80,40,0.35); font: 15px/1.55 'Courier New', Courier, monospace; transform: rotate(-0.6deg); animation: docIn 0.5s ease; }
+#document .paper h1 { font: 700 13px 'Courier New', monospace; letter-spacing: 0.3em; text-align: center; margin: 0 0 4px; }
+#document .paper h2 { font: 700 20px 'Cinzel', serif; letter-spacing: 0.12em; text-align: center; margin: 4px 0 14px; color: #5a1a12; }
+#document .paper .stamp { float: right; margin: -6px -4px 6px 10px; padding: 4px 10px; border: 3px solid rgba(160,40,30,0.75); color: rgba(160,40,30,0.8); font: 700 14px 'Courier New', monospace; letter-spacing: 0.2em; transform: rotate(8deg); }
+#document .paper .seal { display: block; width: 46px; height: 46px; margin: 0 auto 8px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #c9603a, #7a2814 70%); box-shadow: 0 2px 4px rgba(0,0,0,0.4); }
+#document .paper p { margin: 8px 0; }
+#document .paper .hl { background: rgba(200, 60, 40, 0.22); padding: 0 2px; }
+#document .paper .sig { margin-top: 16px; text-align: right; font-style: italic; }
+#document .hint { color: var(--dim); font: 500 13px 'Inter'; }
+@keyframes docIn { from { opacity: 0; transform: translateY(30px) rotate(-3deg); } to { opacity: 1; transform: rotate(-0.6deg); } }
+@media (max-width: 600px) { #document .paper { font-size: 13px; padding: 20px; } }

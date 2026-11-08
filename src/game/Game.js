@@ -1,11 +1,13 @@
 import * as THREE from 'three';
 import { generateTextures } from '../world/textures.js';
-import { Terrain } from '../world/terrain.js';
+import { Terrain, HQ } from '../world/terrain.js';
 import { CollisionWorld } from '../world/physics.js';
 import { Atmosphere } from '../world/sky.js';
 import { Vegetation, Grass, SUN_UNIFORMS } from '../world/vegetation.js';
 import { Fort } from '../world/fort.js';
 import { KharzanFort } from '../world/kfort.js';
+import { makeNightPanorama, SkyBodies } from '../world/nightsky.js';
+import { Roadside } from '../world/roadside.js';
 import { Effects } from '../world/effects.js';
 import { Post } from '../core/post.js';
 import { Input } from '../core/input.js';
@@ -32,6 +34,7 @@ const MODEL_MAP = {
   velmoraQM: { model: 'rifleman', tint: 'velmora', helmet: false },
   kharzan: { model: 'gunner', tint: 'kharzan', helmet: false, helmetAsset: 'flared' },
   kharzanCoat: { model: 'gunner', tint: 'kharzanCoat', helmet: false, helmetAsset: 'flared' },
+  bandit: { model: 'rifleman', tint: 'bandit', helmet: false },
 };
 
 const QUALITY = {
@@ -123,6 +126,12 @@ export class Game {
     progress(0.62, 'Raising Fort Velmar…'); await nextFrame();
     this.fort = new Fort(this.scene, this.terrain, this.physics, this.T);
     this.kfort = new KharzanFort(this, this.fort);
+    progress(0.66, 'Painting the night sky…'); await nextFrame();
+    this.nightTex = makeNightPanorama(Q.shadow === 'low' ? 2048 : 4096);
+    this.skyBodies = new SkyBodies(this.scene);
+    this.skyBodies.build();
+    this.hq = new Fort(this.scene, this.terrain, this.physics, this.T, HQ, { y0: this.terrain.hqH, noLight: true, tag: 'hq-' });
+    this.roadside = new Roadside(this, this.fort.mats);
 
     progress(0.72, 'Mustering soldiers…'); await nextFrame();
     this.soldierTemplates = {};
@@ -165,6 +174,21 @@ export class Game {
     progress(1, 'Ready');
     this.clock = new THREE.Clock();
     renderer.setAnimationLoop(() => this.frame());
+  }
+
+  // Chapter III happens at night under the ringed planet
+  setNight() {
+    if (this.night) return;
+    this.night = true;
+    this.atmo.setNight(this.renderer, this.nightTex);
+    this.skyBodies.group.visible = true;
+    SUN_UNIFORMS.uSunCol.value.set(0.32, 0.42, 0.75);
+    if (this.vegetation.treeSystem) this.vegetation.treeSystem.setNight();
+    this.post.world.sunColor.set(0.35, 0.5, 1.0);
+    this.post.world.rayScale = 0.35;
+    this.effects.setNight();
+    this.audio.setNight();
+    this.renderer.toneMappingExposure = 1.05;
   }
 
   setQuality(q) {
@@ -332,6 +356,7 @@ export class Game {
       const cp = this.camera.position;
       for (const s of this.soldiers) if (s.h.lodMeshes) s.h.setLod(s.position.distanceTo(cp) > 30 ? 1 : 0);
       this.fort.update(dt, this.time);
+      this.hq.update(dt, this.time);
       this.kfort.update(dt, this.time);
       if (this.raid) { this.raid.update(dt); if (this.raid.done) { this.raid.dispose(); this.raid = null; } }
       this.effects.update(dt, this.camera);
@@ -341,6 +366,7 @@ export class Game {
     }
     const focus = this.started ? this.player.position : this.camera.position;
     this.atmo.update(this.camera, this._tmp.copy(focus));
+    this.skyBodies.update(this.camera);
     this.vegetation.update(dt, this.camera);
     this.grass.update(dt, this.camera, this.player.position);
     this.input.endFrame();

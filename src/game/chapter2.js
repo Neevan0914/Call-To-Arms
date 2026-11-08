@@ -15,7 +15,7 @@ import { rand, clamp, easeInOut } from '../core/utils.js';
 const COL = { you: '#e8d9a8', ally: '#9fc7a8', enemy: '#e08a7a', marshal: '#e0775f', general: '#d6bf7c', lt: '#a9cdb0' };
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
-const FOLDER = () => {
+export const FOLDER = () => {
   const g = new THREE.Group();
   const leather = new THREE.MeshStandardMaterial({ color: 0x4a2c1a, roughness: 0.7 });
   const paper = new THREE.MeshStandardMaterial({ color: 0xd9cfb4, roughness: 0.95 });
@@ -350,7 +350,8 @@ export const ChapterTwo = {
     await this.walkOut();
     // ---------- 6. The General ----------
     await this.generalReveal();
-    this.showEnd();
+    // ---------- Chapter III ----------
+    await this.chapterThree();
   },
 
   startRaid() {

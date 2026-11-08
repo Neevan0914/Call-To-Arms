@@ -1,4 +1,4 @@
-# Call To Arms — Chapters I & II
+# Call To Arms — Chapters I–III
 
 A third-person 3D action game that runs in the browser (Three.js + WebGL2). There are
 no external assets: the terrain, forest, fort, soldiers, weapons, textures, flags,
@@ -38,6 +38,29 @@ sound effects, music and voices are all generated in code when the game loads.
    *"After all… why risk so many soldiers' lives for one man?"* *To be continued…*
 
 Start straight at Chapter II with `?skip=keep` on the URL.
+
+## Story (Chapter III: *The Long Road*)
+
+Night falls under a sky of a great ringed planet and its moons.
+
+1. **Orders.** General Morrow hands you the Kharzan war plans: take them east along the
+   old road to Command at **Hollin Ridge**, alone, and don't break the seal. You get your
+   sabre back and a rifle with twenty rounds (fallen enemies' rifles give you more ammo).
+2. **The road.** Bandits loot a wagon by the roadside, and later spring an ambush in the
+   rocky narrows. A Kharzan checkpoint with a machine gun blocks the road between them.
+3. **The camp.** At an abandoned campsite you rest by the fire, and you can **break the
+   seal** or leave it alone.
+   - Read it, and you find *Operation Iron Tide*: the Kharzans will attack Hollin Ridge,
+     the very base you're walking to. Then choose to **warn them** or **keep the secret
+     and turn back**.
+4. **Three endings:**
+   - *Sealed:* you deliver the plans, the Colonel files them for the morning… and the
+     guns open before dawn.
+   - *Warn:* you tell the Colonel; he reads it, rings the bell and mans the walls.
+   - *Keep the secret:* you tell the General the plans were delivered, and you're there
+     when word comes that Hollin Ridge has fallen.
+
+Start straight at Chapter III with `?skip=road`.
 
 ## Running it
 

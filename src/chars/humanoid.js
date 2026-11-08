@@ -32,6 +32,10 @@ export const UNIFORMS = {
     tunic: 0x4a5258, trousers: 0x3c4348, puttee: null, tallBoots: 0x171513, boots: 0x171513, belt: 0x1d1a17,
     helmet: 'kharzan', helmetColor: 0x394045, tabs: 0xb4532a, armband: 0xb4532a, brass: 0x7d7d78, pack: false, canteen: true,
   },
+  bandit: {
+    tunic: 0x6b4a33, trousers: 0x4a3b2c, puttee: 0x3e3326, boots: 0x261a10, belt: 0x3b2716,
+    helmet: 'none', hair: 0x1e1610, tabs: 0x3b2716, brass: 0x7d6a4a, dirty: true,
+  },
   kharzanCoat: {
     tunic: 0x4f575b, trousers: 0x3c4348, puttee: null, tallBoots: 0x171513, boots: 0x171513, belt: 0x1d1a17,
     helmet: 'kharzan', helmetColor: 0x343a3e, tabs: 0xb4532a, armband: 0xb4532a, brass: 0x7d7d78, coat: true, gasmask: true,

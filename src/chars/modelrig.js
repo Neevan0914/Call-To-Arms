@@ -156,6 +156,7 @@ const TINTS = {
   officer: new THREE.Color(0.86, 0.86, 0.8),
   kharzan: new THREE.Color(0.8, 0.92, 1.55),
   kharzanCoat: new THREE.Color(0.72, 0.82, 1.4),
+  bandit: new THREE.Color(1.3, 0.92, 0.62),
 };
 const CLOTH = /tunic|trousers/;
 

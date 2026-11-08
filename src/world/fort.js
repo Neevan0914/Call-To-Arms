@@ -42,15 +42,15 @@ export function M(x, y, z, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1) {
 }
 
 export class Fort {
-  constructor(scene, terrain, physics, T) {
+  constructor(scene, terrain, physics, T, site = FORT, opts = {}) {
     this.scene = scene;
     this.terrain = terrain;
     this.physics = physics;
     this.group = new THREE.Group();
     scene.add(this.group);
-    const cx = FORT.x, cz = FORT.z, H = FORT.half;
-    this.center = new THREE.Vector3(cx, terrain.fortH, cz);
-    const y0 = terrain.fortH;
+    const cx = site.x, cz = site.z, H = site.half;
+    const y0 = opts.y0 ?? terrain.fortH;
+    this.center = new THREE.Vector3(cx, y0, cz);
     this.y0 = y0;
     this.uniforms = { uTime: { value: 0 } };
     const rnd = mulberry32(4242);
@@ -121,7 +121,7 @@ export class Fort {
     addBoxL(H - th, -H, H + th, H, wallH);
     addBoxL(-H - th, -H, -H + th, -3.8, wallH);
     addBoxL(-H - th, 3.8, -H + th, H, wallH);
-    addBoxL(-H - th, -3.8, -H + th, 3.8, wallH, 'wood', 'breach');
+    addBoxL(-H - th, -3.8, -H + th, 3.8, wallH, 'wood', (opts.tag || '') + 'breach');
 
     // Horizontal braces + walkway (fire step) inside the walls
     const walkY = y0 + 3.0;
@@ -202,7 +202,8 @@ export class Fort {
       this.group.add(pivot);
       this.gateDoors.push(pivot);
     }
-    this.gateCollider = addBoxL(-3.6, H - 0.3, 3.6, H + 0.3, 5, 'wood', 'gate');
+    this.gateCollider = addBoxL(-3.6, H - 0.3, 3.6, H + 0.3, 5, 'wood', (opts.tag || '') + 'gate');
+    this.tag = opts.tag || '';
     this.gateOpen = 0; this.gateTarget = 0;
 
     // ---------------- Corner towers ----------------
@@ -426,9 +427,11 @@ export class Fort {
         B.add(new THREE.CylinderGeometry(0.22, 0.22, 2.0, 8), mats.bark, M(x + ox, gy + 0.22, z + oz, 0, ry, Math.PI / 2));
       }
       this.campfire = new THREE.Vector3(x, gy + 0.2, z);
-      this.fireLight = new THREE.PointLight(0xff8a3a, 12, 16, 1.6);
-      this.fireLight.position.set(x, gy + 0.8, z);
-      this.group.add(this.fireLight);
+      if (!opts.noLight) {
+        this.fireLight = new THREE.PointLight(0xff8a3a, 12, 16, 1.6);
+        this.fireLight.position.set(x, gy + 0.8, z);
+        this.group.add(this.fireLight);
+      }
     }
     // lanterns
     for (const [lx, lz] of [[-4.5, -18.4], [4.5, -18.4], [-17, -4], [17, -6]]) {
@@ -505,10 +508,10 @@ export class Fort {
     return m;
   }
 
-  openGate() { this.gateTarget = 1; this.physics.removeBoxesByTag('gate'); }
+  openGate() { this.gateTarget = 1; this.physics.removeBoxesByTag(this.tag + 'gate'); }
 
   blowBreach() {
-    this.physics.removeBoxesByTag('breach');
+    this.physics.removeBoxesByTag(this.tag + 'breach');
     const zero = new THREE.Matrix4().makeScale(0, 0, 0);
     for (const i of this.breachLogIdx) { this.palisade.setMatrixAt(i, zero); this.palisadeTips.setMatrixAt(i, zero); }
     this.palisade.instanceMatrix.needsUpdate = true;

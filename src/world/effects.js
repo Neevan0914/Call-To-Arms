@@ -306,6 +306,14 @@ export class Effects {
     R.t = 0; R.mesh.position.set(p.x, y + 0.03, p.z); R.mesh.visible = true;
   }
 
+  // night: the pollen motes become blinking fireflies
+  setNight() {
+    this.fireflies = true;
+    this.motesAlpha = 1.4;
+    const c = this.motes.col;
+    for (let i = 0; i < this.motes.max; i++) { c[i * 4] = 1.6; c[i * 4 + 1] = 2.2; c[i * 4 + 2] = 0.6; }
+  }
+
   setScale(renderer, camera) {
     const h = renderer.domElement.height;
     const s = h / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
@@ -505,7 +513,9 @@ export class Effects {
       let vy = mp[i * 3 + 1] - (cp.y - 1.5);
       vy = ((vy % 6) + 6) % 6;
       mp[i * 3 + 1] = cp.y - 1.5 + vy;
-      this.motes.col[i * 4 + 3] = this.motesAlpha * (0.5 + Math.sin(this.moteT * 1.5 + i) * 0.5);
+      this.motes.col[i * 4 + 3] = this.fireflies
+        ? this.motesAlpha * Math.pow(Math.max(0, Math.sin(this.moteT * (0.9 + (i % 7) * 0.13) + i * 1.7)), 4)
+        : this.motesAlpha * (0.5 + Math.sin(this.moteT * 1.5 + i) * 0.5);
     }
     this._updateSwordTrail(dt);
     for (const R of this.rings) {

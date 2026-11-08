@@ -154,6 +154,30 @@ export class HUD {
     });
   }
 
+  // Full-screen document (captured papers); resolves when closed (E / Enter / Esc / click / tap).
+  showDocument(html, { minTime = 2.5 } = {}) {
+    const box = $('document');
+    box.querySelector('.paper').innerHTML = html;
+    box.querySelector('.paper').scrollTop = 0;
+    box.classList.remove('hidden');
+    const t0 = performance.now();
+    return new Promise((resolve) => {
+      const close = (e) => {
+        if (performance.now() - t0 < minTime * 1000) return;
+        if (e && e.type === 'keydown' && !['KeyE', 'Enter', 'Escape'].includes(e.code)) return;
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        window.removeEventListener('keydown', close, true);
+        box.removeEventListener('click', close);
+        box.removeEventListener('touchend', close);
+        box.classList.add('hidden');
+        resolve();
+      };
+      window.addEventListener('keydown', close, true);
+      box.addEventListener('click', close);
+      box.addEventListener('touchend', close);
+    });
+  }
+
   letterbox(on) { this.el.letter.classList.toggle('on', on); }
   skipHint(on, progress = 0) {
     this.el.skip.classList.toggle('show', on);

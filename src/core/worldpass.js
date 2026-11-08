@@ -97,7 +97,7 @@ const COMP_FRAG = `
     float z = linZ(d);
     vec3 col = texture2D(tColor, vUv).rgb;
     // depth of field (cutscenes)
-    if (uDOF > 0.001) {
+    if (uDOF > 0.001 && d < 0.99999) { // the sky (stars, planets) stays sharp
       float c0 = coc(z);
       if (c0 > 0.02) {
         vec3 acc = col; float wsum = 1.0;
@@ -214,7 +214,7 @@ export class WorldPass extends Pass {
       }
     }
     au.uSunVis.value = vis;
-    cu.uRayStrength.value = vis > 0 ? 0.9 : 0;
+    cu.uRayStrength.value = vis > 0 ? 0.9 * (this.rayScale ?? 1) : 0;
     if (this.aoEnabled || vis > 0) {
       renderer.setRenderTarget(this.aoRT);
       this.quad.material = this.aoMat;

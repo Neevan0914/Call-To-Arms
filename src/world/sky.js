@@ -116,6 +116,28 @@ export class Atmosphere {
     this._c = new THREE.Vector3();
   }
 
+  // Chapter III: night under the ringed planet. Moonlight keeps the sun's direction (so
+  // baked impostor lighting and shadows stay consistent); only colours and levels change.
+  setNight(renderer, nightTex) {
+    const scene = this.scene;
+    scene.background = nightTex;
+    scene.backgroundIntensity = 1.0;
+    scene.backgroundRotation.set(0, 0, 0);
+    scene.environmentRotation.set(0, 0, 0);
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromEquirectangular(nightTex).texture;
+    pmrem.dispose();
+    scene.environmentIntensity = 1.6;
+    this.fogColor.set(0x14244a);
+    scene.fog.color.copy(this.fogColor);
+    scene.fog.density = 0.0052;
+    this.hemi.color.set(0x5470b8); this.hemi.groundColor.set(0x0d111c); this.hemi.intensity = 0.7;
+    const moon = new THREE.Color(0xa8c0ff);
+    this.sun.color.copy(moon); this.sun.intensity = 1.05;
+    if (this.csm) for (const l of this.csm.lights) { l.color.copy(moon); l.intensity = 1.05; }
+    this.night = true;
+  }
+
   setShadowQuality(q) {
     const size = q === 'high' ? 4096 : q === 'medium' ? 2048 : 1024;
     this.sun.shadow.mapSize.set(size, size);

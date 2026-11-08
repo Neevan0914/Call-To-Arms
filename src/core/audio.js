@@ -50,6 +50,7 @@ export class AudioEngine {
     this._decodeVoices();
     this._startAmbience();
     this._startMusic();
+    if (this._wantNight) { this._wantNight = false; this.setNight(); }
   }
 
   _impulse(sec, decay) {
@@ -359,6 +360,18 @@ export class AudioEngine {
     this._fire.g.gain.setTargetAtTime(gain, ctx.currentTime, 1.5);
   }
 
+  // alarm bell: struck repeatedly, inharmonic partials ringing out
+  bell(strikes = 8) {
+    if (!this.enabled) return;
+    for (let k = 0; k < strikes; k++) {
+      const t0 = k * 0.75;
+      for (const [f, gn, d] of [[523, 0.12, 2.2], [1256, 0.06, 1.4], [1650, 0.04, 1.0], [2730, 0.025, 0.6], [262, 0.05, 2.6]]) {
+        this._tone(this.sfx, { t0, dur: d, type: 'sine', f0: f, f1: f * 0.995, gain: gn, attack: 0.002 });
+      }
+      this._noiseBurst(this.sfx, { t0, dur: 0.04, type: 'highpass', f0: 3000, f1: 2000, gain: 0.15 });
+    }
+  }
+
   heartbeat(t0 = 0, vol = 0.6) {
     if (!this.enabled) return;
     this._tone(this.sfx, { t0, dur: 0.18, f0: 70, f1: 35, gain: vol });
@@ -404,6 +417,41 @@ export class AudioEngine {
     src2.start(); lfo2.start();
     this.birdsOn = true;
     this._birdTimer = 1;
+  }
+
+  // night: a cricket chorus and the odd owl instead of birdsong
+  setNight() {
+    this.birdsOn = false;
+    if (!this.enabled || this.nightOn) { this._wantNight = true; return; }
+    this.nightOn = true;
+    this._owlT = 6;
+    const ctx = this.ctx;
+    for (const [f, rate, pan, vol] of [[4300, 22, -0.6, 0.012], [4750, 27, 0.5, 0.01], [3900, 18, 0.1, 0.008]]) {
+      const o = ctx.createOscillator(); o.frequency.value = f;
+      const am = ctx.createGain(); am.gain.value = 0;
+      const lfo = ctx.createOscillator(); lfo.type = 'square'; lfo.frequency.value = rate;
+      const lg = ctx.createGain(); lg.gain.value = vol;
+      const slow = ctx.createOscillator(); slow.frequency.value = 0.6 + Math.random() * 0.5;
+      const sg = ctx.createGain(); sg.gain.value = 0.5;
+      const out = ctx.createGain(); out.gain.value = 0.5;
+      lfo.connect(lg); lg.connect(am.gain);
+      slow.connect(sg); sg.connect(out.gain);
+      const p = ctx.createStereoPanner ? ctx.createStereoPanner() : ctx.createGain();
+      if (p.pan) p.pan.value = pan;
+      o.connect(am); am.connect(out); out.connect(p); p.connect(this.amb);
+      o.start(); lfo.start(); slow.start();
+    }
+  }
+
+  _owl() {
+    const ctx = this.ctx;
+    const p = ctx.createStereoPanner ? ctx.createStereoPanner() : ctx.createGain();
+    if (p.pan) p.pan.value = rand(-0.8, 0.8);
+    p.connect(this.amb); p.connect(this.reverbIn);
+    const f = rand(380, 430);
+    this._tone(p, { t0: 0, dur: 0.35, type: 'sine', f0: f, f1: f * 0.96, gain: 0.06, attack: 0.08 });
+    this._tone(p, { t0: 0.55, dur: 0.18, type: 'sine', f0: f * 1.02, f1: f, gain: 0.04, attack: 0.05 });
+    this._tone(p, { t0: 0.8, dur: 0.6, type: 'sine', f0: f, f1: f * 0.92, gain: 0.06, attack: 0.1 });
   }
 
   _bird() {
@@ -576,6 +624,10 @@ export class AudioEngine {
       L.out.gain.setTargetAtTime(L.target, now, 1.5);
     }
     this.lowpass.frequency.setTargetAtTime(this.muffle > 0 ? 20000 * Math.pow(0.02, this.muffle) : 20000, now, 0.2);
+    if (this.nightOn) {
+      this._owlT -= dt;
+      if (this._owlT <= 0) { this._owl(); this._owlT = rand(14, 30); }
+    }
     if (this.birdsOn) {
       this._birdTimer -= dt;
       if (this._birdTimer <= 0) { this._bird(); this._birdTimer = rand(1.5, 6); }

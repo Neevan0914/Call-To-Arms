@@ -3,6 +3,7 @@ import { FORT, SPAWN } from '../world/terrain.js';
 import { buildRifle, buildLMG, WEAPONS } from '../chars/weapons.js';
 import { rand, lerp, clamp, easeInOut, easeOut } from '../core/utils.js';
 import { ChapterTwo } from './chapter2.js';
+import { ChapterThree } from './chapter3.js';
 
 const COL = { you: '#e8d9a8', ally: '#9fc7a8', officer: '#e2c06e', enemy: '#e08a7a', qm: '#b7c9e0' };
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -315,6 +316,7 @@ export class Story {
   async run(from = 'intro') {
     this.g.player.stats.start = performance.now();
     if (from === 'keep') { await this.chapterTwo(); return; }
+    if (from === 'road') { await this.chapterThree(); return; }
     const order = ['intro', 'ambush', 'path', 'fort', 'welcome', 'defend'];
     let i = Math.max(0, order.indexOf(from));
     if (i > 0) this.jumpTo(order[i]);
@@ -974,8 +976,12 @@ export class Story {
     p.h.root.visible = true;
   }
 
-  showEnd() {
+  showEnd({ chapter = null, title = null, sub = null } = {}) {
     const g = this.g, p = g.player;
+    const box = document.getElementById('endScreen');
+    if (chapter) box.querySelector('.chapter').textContent = chapter;
+    if (title) box.querySelector('.game-title').textContent = title;
+    if (sub) box.querySelector('.end-sub').textContent = sub;
     g.ended = true;
     g.controlsEnabled = false;
     g.input.unlock();
@@ -991,4 +997,4 @@ export class Story {
   }
 }
 
-Object.assign(Story.prototype, ChapterTwo);
+Object.assign(Story.prototype, ChapterTwo, ChapterThree);

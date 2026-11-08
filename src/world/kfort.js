@@ -401,7 +401,7 @@ export class KharzanFort {
       this.cellDoor.rotation.y = this.doorOpen * 1.9;
     }
     if (this.burning && this.fireLight) {
-      this.fireLight.intensity = 260 + Math.sin(t * 9) * 40 + Math.sin(t * 5.3) * 50 + Math.random() * 40;
+      this.fireLight.intensity = (260 + Math.sin(t * 9) * 40 + Math.sin(t * 5.3) * 50 + Math.random() * 40) * (this.glowScale ?? 1);
       if (this.char < 1) {
         this.char = Math.min(1, this.char + dt / 25);
         const k = 1 - this.char * 0.72;

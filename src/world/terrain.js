@@ -7,6 +7,8 @@ export const SEG = 320;
 export const FORT = { x: 35, z: -330, half: 32 };
 // Chapter II: the Kharzan stronghold, far north-west of the Thornwood clearing
 export const KFORT = { x: -215, z: 205, half: 30 };
+// Chapter III: Velmoran Command at Hollin Ridge (a second log fort, gate facing +z)
+export const HQ = { x: 240, z: 150, half: 32 };
 export const SPAWN = { x: 0, z: 0 };
 export const BOUND = 360;
 
@@ -16,6 +18,12 @@ const PATH_CTRL = [
   [-330, 4], [-250, -14], [-170, -38], [-100, -56], [-45, -64], [-5, -68],
   [26, -92], [40, -130], [24, -174], [14, -212], [27, -250], [35, -276],
   [35, -298], [35, -322],
+];
+
+// Chapter III: the long road from Kharsk Keep's gate east to Hollin Ridge.
+const ROAD2_CTRL = [
+  [-215, 168], [-205, 148], [-172, 128], [-122, 118], [-72, 132], [-22, 158], [28, 186],
+  [88, 210], [148, 228], [200, 230], [234, 214], [240, 196], [240, 180],
 ];
 
 // Terrain shading with the asset pack's PBR ground sets (albedo + normal maps, ~1 m tiles):
@@ -87,8 +95,10 @@ export class Terrain {
     this.half = WORLD_SIZE / 2;
     this._pq = { d: Infinity, s: 0, h: 0, i: 0 };
     this._buildPath();
+    this.road2 = this._buildRoad(ROAD2_CTRL, 900);
     this.fortH = this.raw(FORT.x, FORT.z) + 1.5;
     this.kfortH = this.raw(KFORT.x, KFORT.z) + 0.8;
+    this.hqH = this.raw(HQ.x, HQ.z) + 1.2;
     this.clearH = this.raw(SPAWN.x, SPAWN.z);
     this._computePathHeights();
     this._computeField();
@@ -132,8 +142,68 @@ export class Terrain {
     }
   }
 
-  // nearest point on path; returns shared object {d, s, h, i}
+  // a second road: polyline + its own bucket grid
+  _buildRoad(ctrl, n) {
+    const curve = new THREE.CatmullRomCurve3(ctrl.map(([x, z]) => new THREE.Vector3(x, 0, z)), false, 'centripetal');
+    const path = curve.getSpacedPoints(n).map((p) => ({ x: p.x, z: p.z, s: 0, h: 0 }));
+    let s = 0;
+    for (let i = 1; i < path.length; i++) { s += Math.hypot(path[i].x - path[i - 1].x, path[i].z - path[i - 1].z); path[i].s = s; }
+    const buckets = new Map(), R = 26, B = this.bucketSize;
+    for (let i = 0; i < path.length - 1; i++) {
+      const a = path[i], b = path[i + 1];
+      const x0 = Math.floor((Math.min(a.x, b.x) - R) / B), x1 = Math.floor((Math.max(a.x, b.x) + R) / B);
+      const z0 = Math.floor((Math.min(a.z, b.z) - R) / B), z1 = Math.floor((Math.max(a.z, b.z) + R) / B);
+      for (let gx = x0; gx <= x1; gx++) for (let gz = z0; gz <= z1; gz++) {
+        const k = gx * 4096 + gz;
+        let arr = buckets.get(k);
+        if (!arr) { arr = []; buckets.set(k, arr); }
+        arr.push(i);
+      }
+    }
+    return { path, length: s, buckets };
+  }
+
+  _queryRoad(road, x, z, q) {
+    const arr = road.buckets.get(Math.floor(x / this.bucketSize) * 4096 + Math.floor(z / this.bucketSize));
+    if (!arr) return q;
+    for (const i of arr) {
+      const a = road.path[i], b = road.path[i + 1];
+      const abx = b.x - a.x, abz = b.z - a.z;
+      const l2 = abx * abx + abz * abz;
+      let t = l2 > 0 ? ((x - a.x) * abx + (z - a.z) * abz) / l2 : 0;
+      t = clamp(t, 0, 1);
+      const d = Math.hypot(x - (a.x + abx * t), z - (a.z + abz * t));
+      if (d < q.d) { q.d = d; q.i = i; q.s = lerp(a.s, b.s, t); q.h = lerp(a.h, b.h, t); q.road = 1; }
+    }
+    return q;
+  }
+
+  // nearest point on the long road (Chapter III); returns {d, s, h, i}
+  road2Query(x, z) {
+    const q = this._pq2 || (this._pq2 = { d: Infinity, s: 0, h: 0, i: -1, road: 1 });
+    q.d = Infinity; q.s = 0; q.h = 0; q.i = -1;
+    return this._queryRoad(this.road2, x, z, q);
+  }
+
+  road2PointAtS(s) {
+    const P = this.road2.path;
+    s = clamp(s, 0, this.road2.length);
+    let lo = 0, hi = P.length - 1;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (P[m].s < s) lo = m; else hi = m; }
+    const a = P[lo], b = P[hi];
+    const t = (s - a.s) / Math.max(1e-6, b.s - a.s);
+    return { x: lerp(a.x, b.x, t), z: lerp(a.z, b.z, t) };
+  }
+
+  // nearest point on either road; returns shared object {d, s, h, i, road}
   pathQuery(x, z) {
+    const q = this._pathQuery0(x, z);
+    q.road = 0;
+    if (this.road2) this._queryRoad(this.road2, x, z, q);
+    return q;
+  }
+
+  _pathQuery0(x, z) {
     const q = this._pq;
     q.d = Infinity; q.s = 0; q.h = 0; q.i = -1;
     const arr = this.buckets.get(Math.floor(x / this.bucketSize) * 4096 + Math.floor(z / this.bucketSize));
@@ -156,7 +226,8 @@ export class Terrain {
   fortDist(x, z) {
     const a = Math.max(Math.abs(x - FORT.x), Math.abs(z - FORT.z));
     const b = Math.max(Math.abs(x - KFORT.x), Math.abs(z - KFORT.z)) - (KFORT.half - FORT.half);
-    return Math.min(a, b);
+    const c = Math.max(Math.abs(x - HQ.x), Math.abs(z - HQ.z)) - (HQ.half - FORT.half);
+    return Math.min(a, b, c);
   }
   kfortDist(x, z) { return Math.max(Math.abs(x - KFORT.x), Math.abs(z - KFORT.z)); }
 
@@ -166,13 +237,19 @@ export class Terrain {
     h = lerp(h, this.fortH, fm);
     const km = 1 - smoothstep(KFORT.half + 6, KFORT.half + 34, this.kfortDist(x, z));
     if (km > 0) h = lerp(h, this.kfortH, km);
+    const hm = 1 - smoothstep(HQ.half + 6, HQ.half + 36, Math.max(Math.abs(x - HQ.x), Math.abs(z - HQ.z)));
+    if (hm > 0) h = lerp(h, this.hqH, hm);
     const dc = Math.hypot(x - SPAWN.x, z - SPAWN.z);
     h = lerp(h, this.clearH, (1 - smoothstep(8, 28, dc)) * 0.8);
     return h;
   }
 
   _computePathHeights() {
-    const P = this.path;
+    this._smoothRoad(this.path);
+    if (this.road2) this._smoothRoad(this.road2.path);
+  }
+
+  _smoothRoad(P) {
     const raw = P.map((p) => this.baseHeight(p.x, p.z));
     let a = raw;
     for (let pass = 0; pass < 3; pass++) {

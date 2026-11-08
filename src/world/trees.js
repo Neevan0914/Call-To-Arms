@@ -175,6 +175,7 @@ export class TreeSystem {
         }]),
       });
       imat.uniforms.tAtlas.value = atlas.texture;
+      (this.impostorMats || (this.impostorMats = [])).push(imat);
       const imp = new THREE.InstancedMesh(g, imat, cap);
       const iMat = new THREE.InstancedBufferAttribute(new Float32Array(cap * 16), 16); iMat.setUsage(THREE.DynamicDrawUsage);
       const iCol = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3); iCol.setUsage(THREE.DynamicDrawUsage);
@@ -267,6 +268,15 @@ export class TreeSystem {
     tex.anisotropy = 4;
     tex.needsUpdate = true;
     return { texture: tex };
+  }
+
+  // moonlit impostors (Chapter III)
+  setNight() {
+    for (const m of this.impostorMats || []) {
+      m.uniforms.uAmb.value = 0.16;
+      m.uniforms.uSunI.value = 0.55;
+      m.uniforms.uSunCol.value.set(0.55, 0.68, 1.0);
+    }
   }
 
   setQuality(q) {
