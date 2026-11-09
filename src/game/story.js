@@ -819,7 +819,7 @@ export class Story {
   spawnWave(initial = false) {
     const f = this.g.fort, S = f.spots;
     const make = (pos, route, coat) => {
-      const e = this.spawnEnemy(this.freeSpot(pos.x + rand(-2, 2), pos.z + rand(-2, 2)), { coat, accuracy: 0.3, damage: 14, allyDamageScale: 1.35, name: 'Kharzan Stormtrooper' });
+      const e = this.spawnEnemy(this.freeSpot(pos.x + rand(-2, 2), pos.z + rand(-2, 2)), { coat, accuracy: 0.3, damage: 14, allyDamageScale: 1.35, name: 'Kharzan Trooper' });
       e.goTo(route.map((r) => r.clone().add(V(rand(-2.5, 2.5), 0, rand(-1.5, 1.5)))), rand(3.6, 4.6));
       e.engageMax = rand(16, 28);
       this.attackers.push(e);
