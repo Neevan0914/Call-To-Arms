@@ -273,8 +273,8 @@ export class TreeSystem {
   // moonlit impostors (Chapter III)
   setNight() {
     for (const m of this.impostorMats || []) {
-      m.uniforms.uAmb.value = 0.16;
-      m.uniforms.uSunI.value = 0.55;
+      m.uniforms.uAmb.value = 0.32;
+      m.uniforms.uSunI.value = 0.85;
       m.uniforms.uSunCol.value.set(0.55, 0.68, 1.0);
     }
   }

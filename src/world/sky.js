@@ -127,14 +127,14 @@ export class Atmosphere {
     const pmrem = new THREE.PMREMGenerator(renderer);
     scene.environment = pmrem.fromEquirectangular(nightTex).texture;
     pmrem.dispose();
-    scene.environmentIntensity = 1.6;
-    this.fogColor.set(0x14244a);
+    scene.environmentIntensity = 3.6;
+    this.fogColor.set(0x1f3361);
     scene.fog.color.copy(this.fogColor);
-    scene.fog.density = 0.0052;
-    this.hemi.color.set(0x5470b8); this.hemi.groundColor.set(0x0d111c); this.hemi.intensity = 0.7;
+    scene.fog.density = 0.0040;
+    this.hemi.color.set(0x8aa4ea); this.hemi.groundColor.set(0x363e54); this.hemi.intensity = 2.5;
     const moon = new THREE.Color(0xa8c0ff);
-    this.sun.color.copy(moon); this.sun.intensity = 1.05;
-    if (this.csm) for (const l of this.csm.lights) { l.color.copy(moon); l.intensity = 1.05; }
+    this.sun.color.copy(moon); this.sun.intensity = 2.8;
+    if (this.csm) for (const l of this.csm.lights) { l.color.copy(moon); l.intensity = 2.8; }
     this.night = true;
   }
 

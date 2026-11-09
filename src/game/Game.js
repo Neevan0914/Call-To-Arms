@@ -188,7 +188,7 @@ export class Game {
     this.post.world.rayScale = 0.35;
     this.effects.setNight();
     this.audio.setNight();
-    this.renderer.toneMappingExposure = 1.05;
+    this.renderer.toneMappingExposure = 1.45;
   }
 
   setQuality(q) {
