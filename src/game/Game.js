@@ -130,6 +130,7 @@ export class Game {
     this.nightTex = makeNightPanorama(Q.shadow === 'low' ? 2048 : 4096);
     this.skyBodies = new SkyBodies(this.scene);
     this.skyBodies.build();
+    this.skyBodies.setMode('day');
     this.hq = new Fort(this.scene, this.terrain, this.physics, this.T, HQ, { y0: this.terrain.hqH, noLight: true, tag: 'hq-' });
     this.roadside = new Roadside(this, this.fort.mats);
 
@@ -181,7 +182,7 @@ export class Game {
     if (this.night) return;
     this.night = true;
     this.atmo.setNight(this.renderer, this.nightTex);
-    this.skyBodies.group.visible = true;
+    this.skyBodies.setMode('night');
     SUN_UNIFORMS.uSunCol.value.set(0.32, 0.42, 0.75);
     if (this.vegetation.treeSystem) this.vegetation.treeSystem.setNight();
     this.post.world.sunColor.set(0.35, 0.5, 1.0);

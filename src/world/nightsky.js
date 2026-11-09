@@ -179,6 +179,26 @@ function paintMoon(size, { light, seed = 3, col = [190, 205, 230] }) {
   return tex;
 }
 
+// By day only the sunlit side shows: alpha follows brightness (the dark limb and night
+// side melt into the blue) and the colours wash out toward the sky.
+function dayVersion(tex) {
+  const src = tex.image;
+  const c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(src, 0, 0);
+  const img = ctx.getImageData(0, 0, c.width, c.height), d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const lum = (d[i] + d[i + 1] + d[i + 2]) / 765;
+    const k = clamp01((lum - 0.05) / 0.4);
+    d[i + 3] = d[i + 3] * (0.42 + 0.58 * k * k * (3 - 2 * k));
+    d[i] = mix(d[i], 235, 0.2); d[i + 1] = mix(d[i + 1], 242, 0.2); d[i + 2] = mix(d[i + 2], 255, 0.2);
+  }
+  ctx.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 export class SkyBodies {
   constructor(scene) {
     this.group = new THREE.Group();
@@ -194,15 +214,15 @@ export class SkyBodies {
     this.built = true;
     const pale = [[150, 170, 205], [205, 222, 245], [235, 242, 252], [175, 195, 226], [220, 232, 250], [160, 182, 218], [232, 240, 252], [190, 208, 238]];
     this.add(paintPlanet(1024, { r: 205, rings: { inner: 1.3, outer: 2.3, ratio: 0.23 }, tilt: -0.24, light: [0.85, 0.32, 0.42], bands: pale, seed: 7 }),
-      { az: 146, el: 27, diam: 19, discFrac: 410 / 1024, tint: 1.25 });
+      { az: 146, el: 27, diam: 19, discFrac: 410 / 1024, tint: 1.25, day: [300, 30, 0.8] });
     this.add(paintPlanet(512, { r: 150, light: [-0.6, 0.4, 0.5], bands: [[120, 170, 190], [160, 210, 220], [110, 150, 185], [175, 220, 230], [130, 175, 200]], glow: '140,210,230', seed: 11 }),
-      { az: 72, el: 44, diam: 6.5, discFrac: 300 / 512, tint: 1.1 });
-    this.add(paintMoon(256, { light: [0.95, 0.15, -0.15], seed: 5 }), { az: 104, el: 41, diam: 2.6, discFrac: 0.84, tint: 1.4 });
-    this.add(paintMoon(256, { light: [0.9, -0.1, -0.35], seed: 9, col: [200, 210, 225] }), { az: 96, el: 15, diam: 1.7, discFrac: 0.84, tint: 1.4 });
-    this.add(paintMoon(256, { light: [-0.3, 0.6, 0.6], seed: 13, col: [215, 200, 190] }), { az: 205, el: 33, diam: 1.2, discFrac: 0.84, tint: 1.2 });
+      { az: 72, el: 44, diam: 6.5, discFrac: 300 / 512, tint: 1.1, day: [22, 38, 0.75] });
+    this.add(paintMoon(256, { light: [0.95, 0.15, -0.15], seed: 5 }), { az: 104, el: 41, diam: 2.6, discFrac: 0.84, tint: 1.4, day: [262, 48, 0.85] });
+    this.add(paintMoon(256, { light: [0.9, -0.1, -0.35], seed: 9, col: [200, 210, 225] }), { az: 96, el: 15, diam: 1.7, discFrac: 0.84, tint: 1.4, day: [335, 18, 0.8] });
+    this.add(paintMoon(256, { light: [-0.3, 0.6, 0.6], seed: 13, col: [215, 200, 190] }), { az: 205, el: 33, diam: 1.2, discFrac: 0.84, tint: 1.2, day: [215, 30, 0.75] });
   }
 
-  add(tex, { az, el, diam, discFrac, tint = 1 }) {
+  add(tex, { az, el, diam, discFrac, tint = 1, day = null }) {
     const mat = new THREE.SpriteMaterial({ map: tex, fog: false, depthWrite: false, transparent: true, color: new THREE.Color(tint, tint, tint * 1.04) });
     const s = new THREE.Sprite(mat);
     const disc = 2 * this.D * Math.tan(THREE.MathUtils.degToRad(diam / 2));
@@ -210,7 +230,33 @@ export class SkyBodies {
     s.renderOrder = -10;
     s.frustumCulled = false;
     this.group.add(s);
-    this.items.push({ s, dir: skyDir(az, el) });
+    const nightDir = skyDir(az, el);
+    this.items.push({ s, dir: nightDir, nightDir, dayDir: day ? skyDir(day[0], day[1]) : nightDir, dayOpacity: day ? day[2] : 0.5, tint });
+  }
+
+  // Daytime: the bodies hang on the far side of the sky from the sun, pale and washed
+  // out like a moon by day (additive, so their unlit sides vanish into the blue).
+  // Night: full strength in their night positions.
+  setMode(mode) {
+    this.mode = mode;
+    this.group.visible = true;
+    for (const it of this.items) {
+      const m = it.s.material;
+      if (!it.nightTex) it.nightTex = m.map;
+      if (mode === 'day') {
+        if (!it.dayTex) it.dayTex = dayVersion(it.nightTex);
+        it.dir = it.dayDir;
+        m.map = it.dayTex;
+        m.opacity = it.dayOpacity;
+        m.color.setRGB(1.3, 1.36, 1.5); // a pale moon against the daytime sky
+      } else {
+        it.dir = it.nightDir;
+        m.map = it.nightTex;
+        m.opacity = 1;
+        m.color.setRGB(it.tint, it.tint, it.tint * 1.04);
+      }
+      m.needsUpdate = true;
+    }
   }
 
   update(camera) {
