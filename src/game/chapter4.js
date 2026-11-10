@@ -644,7 +644,7 @@ export const ChapterFour = {
       return s;
     });
     for (const s of [this.general, this.corporal, ...this.campMen]) { s.holdFire = true; s.invulnerable = true; }
-    await this.until(() => (p.position.distanceTo(this.corporal.position) < 16 || this.roadS() < 12) && p.alive && g.time >= freeAt);
+    await this.until(() => (p.position.distanceTo(this.corporal.position) < 16 || this.roadS() < 12) && p.alive && next >= thoughts.length && g.time >= freeAt);
     this.phaseUpdate = null;
     g.hud.setMarker(null);
   },
