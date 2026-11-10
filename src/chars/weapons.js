@@ -72,7 +72,7 @@ const box = (x, y, z) => new THREE.BoxGeometry(x, y, z);
 
 // Optional glTF weapon models (stock at origin, barrel along +X). When present they
 // replace the procedural rifles; grip points were measured on the models.
-const ASSETS = { rifle: null, lmg: null, sabre: null, scabbard: null };
+const ASSETS = { rifle: null, lmg: null, sabre: null, scabbard: null, axe: null };
 export function setWeaponAssets(a) { for (const k of Object.keys(ASSETS)) ASSETS[k] = a[k] || null; }
 
 function fromAsset(src) {
@@ -212,6 +212,30 @@ export function buildSword(T) {
   P.add(M.brass, new THREE.SphereGeometry(0.019, 8, 6), 0, 0, -0.122, 0, 0, 0, 1, 1, 1.3); // pommel
   const g = P.build();
   g.userData = { gripR: new THREE.Vector3(0, 0, -0.06), tip: new THREE.Vector3(0, 0.07, 0.86), type: 'sword' };
+  return g;
+}
+
+// Double-bladed battle axe (Chapter IV). Asset frame: haft along +Y, heads at the top, blades
+// on ±X, leather grip around y = -0.76. Mounted like the sabre: haft along +Z from the grip,
+// blades turned to ±Y so one edge leads the swing.
+export function buildAxe(T) {
+  const g = new THREE.Group();
+  if (ASSETS.axe) {
+    const mid = new THREE.Group(); mid.rotation.z = Math.PI / 2;
+    const m = ASSETS.axe.clone(true);
+    m.rotation.x = Math.PI / 2;
+    m.position.z = 0.76;
+    m.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    mid.add(m); g.add(mid);
+    g.scale.setScalar(0.92);
+  } else {
+    const M = weaponMaterials(T);
+    const P = new Parts();
+    P.add(M.wood, cylZ(0.018, 0.02, 1.2, 8), 0, 0, 0.3);
+    for (const sy of [-1, 1]) P.add(M.steel, box(0.012, 0.2, 0.26), 0, sy * 0.13, 0.76);
+    g.add(P.build());
+  }
+  g.userData = { gripR: new THREE.Vector3(0, 0, 0.02), tip: new THREE.Vector3(0, -0.2, 0.72), type: 'sword', axe: true };
   return g;
 }
 

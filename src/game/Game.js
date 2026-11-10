@@ -8,6 +8,7 @@ import { Fort } from '../world/fort.js';
 import { KharzanFort } from '../world/kfort.js';
 import { makeNightPanorama, SkyBodies } from '../world/nightsky.js';
 import { Roadside } from '../world/roadside.js';
+import { Defenses } from '../world/defenses.js';
 import { Effects } from '../world/effects.js';
 import { Post } from '../core/post.js';
 import { Input } from '../core/input.js';
@@ -133,6 +134,7 @@ export class Game {
     this.skyBodies.setMode('day');
     this.hq = new Fort(this.scene, this.terrain, this.physics, this.T, HQ, { y0: this.terrain.hqH, noLight: true, tag: 'hq-' });
     this.roadside = new Roadside(this, this.fort.mats);
+    this.defenses = new Defenses(this, this.fort.mats);
 
     progress(0.72, 'Mustering soldiers…'); await nextFrame();
     this.soldierTemplates = {};
@@ -190,6 +192,20 @@ export class Game {
     this.effects.setNight();
     this.audio.setNight();
     this.renderer.toneMappingExposure = 1.45;
+  }
+
+  setDay() {
+    if (!this.night) return;
+    this.night = false;
+    this.atmo.setDay();
+    this.skyBodies.setMode('day');
+    SUN_UNIFORMS.uSunCol.value.set(1.0, 0.82, 0.55).multiplyScalar(2.2);
+    if (this.vegetation.treeSystem) this.vegetation.treeSystem.setDay();
+    this.post.world.sunColor.set(1.0, 0.78, 0.5);
+    this.post.world.rayScale = 1;
+    this.effects.setDay();
+    this.audio.setDay();
+    this.renderer.toneMappingExposure = 0.95;
   }
 
   setQuality(q) {

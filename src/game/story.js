@@ -4,6 +4,7 @@ import { buildRifle, buildLMG, WEAPONS } from '../chars/weapons.js';
 import { rand, lerp, clamp, easeInOut, easeOut } from '../core/utils.js';
 import { ChapterTwo } from './chapter2.js';
 import { ChapterThree } from './chapter3.js';
+import { ChapterFour } from './chapter4.js';
 
 const COL = { you: '#e8d9a8', ally: '#9fc7a8', officer: '#e2c06e', enemy: '#e08a7a', qm: '#b7c9e0' };
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -218,7 +219,7 @@ export class Story {
 
   bark(speaker, text, color = COL.ally, dur = 2.6, voice = 'soldier') {
     const g = this.g;
-    g.hud.subtitle(speaker, text, color);
+    g.hud.subtitle(speaker, text, color, /^\(.*\)$/.test(text)); // (inner thoughts) in italics
     const clipDur = g.audio.playLine(voice, text);
     if (clipDur > 0) dur = Math.max(dur, clipDur + 0.4);
     clearTimeout(this._barkT);
@@ -317,6 +318,7 @@ export class Story {
     this.g.player.stats.start = performance.now();
     if (from === 'keep') { await this.chapterTwo(); return; }
     if (from === 'road') { await this.chapterThree(); return; }
+    if (from === 'hollin') { await this.chapterFour(); return; }
     const order = ['intro', 'ambush', 'path', 'fort', 'welcome', 'defend'];
     let i = Math.max(0, order.indexOf(from));
     if (i > 0) this.jumpTo(order[i]);
@@ -976,9 +978,16 @@ export class Story {
     p.h.root.visible = true;
   }
 
-  showEnd({ chapter = null, title = null, sub = null } = {}) {
+  showEnd({ chapter = null, title = null, sub = null, retry = false } = {}) {
     const g = this.g, p = g.player;
     const box = document.getElementById('endScreen');
+    const rb = document.getElementById('btnRetryChoice');
+    if (rb) {
+      rb.classList.toggle('hidden', !retry);
+      rb.onclick = () => { this.retryCamp().catch((e) => console.error(e)); };
+    }
+    const tbc = box.querySelector('.tbc');
+    if (tbc) tbc.textContent = retry ? 'The story continues if you warn Hollin Ridge…' : 'To be continued…';
     if (chapter) box.querySelector('.chapter').textContent = chapter;
     if (title) box.querySelector('.game-title').textContent = title;
     if (sub) box.querySelector('.end-sub').textContent = sub;
@@ -997,4 +1006,4 @@ export class Story {
   }
 }
 
-Object.assign(Story.prototype, ChapterTwo, ChapterThree);
+Object.assign(Story.prototype, ChapterTwo, ChapterThree, ChapterFour);

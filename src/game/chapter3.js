@@ -205,6 +205,10 @@ export const ChapterThree = {
 
     // ---------- 2. Bandits at the wagon ----------
     await this.encounterWagon();
+    await this.chapterThreeFromCamp();
+  },
+
+  async chapterThreeFromCamp() {
     // ---------- 3. The camp ----------
     const choice = await this.restAtCamp();
     if (choice === 'keep') { await this.endingKeep(); return; }
@@ -213,6 +217,32 @@ export const ChapterThree = {
     await this.encounterNarrows();
     // ---------- 6. Hollin Ridge ----------
     await this.arriveHQ(choice);
+  },
+
+  // "Make a different choice": back to the night road, just short of the campfire
+  async retryCamp() {
+    const g = this.g, p = g.player, u = g.post.u;
+    document.getElementById('endScreen').classList.add('hidden');
+    g.ended = false;
+    g.hud.show(true);
+    this.readPlans = false; this.choice3 = null; this._keepDark = true;
+    this.setupRoad();
+    for (const a of [this.general, this.aide, ...(this.camp3 || [])]) if (a) g.removeSoldier(a);
+    g.effects.emitters.length = 0;
+    g.kfort.glow(false);
+    g.audio.fireLoop(0);
+    const start = this.roadPoint(SITES.camp - 40);
+    p.revive(start, 0);
+    p.give('rifle', 5, 20);
+    p.weapons.sword.has = true;
+    p.equip('rifle', true);
+    const ahead = this.roadPoint(SITES.camp);
+    u.uFade.value = 0;
+    this.endCutscene({ yaw: Math.atan2(-(ahead.x - start.x), -(ahead.z - start.z)) });
+    if (!g.input.locked) g.input.lock();
+    g.hud.setObjective('Take the plans to Hollin Ridge');
+    this.roadUpdate();
+    await this.chapterThreeFromCamp();
   },
 
   // generic fight: spawn(), then wait for every enemy to fall; death restarts it
@@ -472,7 +502,7 @@ export const ChapterThree = {
     this.colonel.lookAt = p.position;
     await this.until(() => met && p.alive);
     g.hud.setMarker(null);
-    if (choice === 'warn') await this.endingWarn(); else await this.endingSealed();
+    if (choice === 'warn') { await this.endingWarn(); await this.chapterFour(); } else await this.endingSealed();
   },
 
   // stage the player and the Colonel face to face
@@ -532,7 +562,7 @@ export const ChapterThree = {
       this.tween(A, 'muffle', 0.6, 2.5);
       await this.wait(2.8);
     }, { canSkip: true });
-    this.showEnd({ chapter: 'Chapter III — The Long Road', title: 'THE SEAL HELD', sub: 'You delivered the plans. Nobody read them in time.' });
+    this.showEnd({ chapter: 'Chapter III — The Long Road', title: 'THE SEAL HELD', sub: 'You delivered the plans. Nobody read them in time.', retry: true });
   },
 
   // ---------- ending B: warn Command ----------
@@ -582,7 +612,7 @@ export const ChapterThree = {
       this.tween(u.uFade, 'value', 1, 2.5);
       await this.wait(2.8);
     }, { canSkip: true });
-    this.showEnd({ chapter: 'Chapter III — The Long Road', title: 'HOLLIN RIDGE STANDS READY', sub: 'You broke the seal. When the guns open, the walls will be manned.' });
+    // the story goes on: Chapter IV
   },
 
   // ---------- ending C: keep the secret ----------
@@ -645,7 +675,7 @@ export const ChapterThree = {
       this.tween(u.uFade, 'value', 1, 3);
       await this.wait(3.2);
     }, { canSkip: true });
-    this.showEnd({ chapter: 'Chapter III — The Long Road', title: 'HOLLIN RIDGE BURNS', sub: 'You kept the secret. Now the secret keeps you.' });
+    this.showEnd({ chapter: 'Chapter III — The Long Road', title: 'HOLLIN RIDGE BURNS', sub: 'You kept the secret. Now the secret keeps you.', retry: true });
   },
 
   hqShell(pos) {

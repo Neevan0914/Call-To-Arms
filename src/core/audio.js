@@ -440,7 +440,15 @@ export class AudioEngine {
       if (p.pan) p.pan.value = pan;
       o.connect(am); am.connect(out); out.connect(p); p.connect(this.amb);
       o.start(); lfo.start(); slow.start();
+      (this._crickets || (this._crickets = [])).push(p);
     }
+  }
+
+  setDay() {
+    this._wantNight = false;
+    this.nightOn = false;
+    this.birdsOn = true;
+    if (this._crickets) { for (const p of this._crickets) p.disconnect(); this._crickets = []; }
   }
 
   _owl() {

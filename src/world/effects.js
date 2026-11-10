@@ -306,6 +306,13 @@ export class Effects {
     R.t = 0; R.mesh.position.set(p.x, y + 0.03, p.z); R.mesh.visible = true;
   }
 
+  setDay() {
+    this.fireflies = false;
+    this.motesAlpha = 0.35;
+    const c = this.motes.col;
+    for (let i = 0; i < this.motes.max; i++) { c[i * 4] = 1.0; c[i * 4 + 1] = 0.85; c[i * 4 + 2] = 0.55; }
+  }
+
   // night: the pollen motes become blinking fireflies
   setNight() {
     this.fireflies = true;

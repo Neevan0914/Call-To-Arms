@@ -23,6 +23,10 @@ export const CAST = {
   colonel: { kokoro: 'bm_george', speed: 0.94, fx: 'colonel', tts: { slot: 13, pitch: 0.78, rate: 0.92 } },
   bandit: { kokoro: 'am_santa', speed: 1.0, fx: 'bandit', tts: { slot: 14, pitch: 0.75, rate: 1.0 } },
   bandit2: { kokoro: 'am_puck', speed: 1.08, fx: 'gruff', tts: { slot: 15, pitch: 0.95, rate: 1.1 } },
+  // Chapter IV
+  varek: { kokoro: 'am_onyx', speed: 0.95, fx: 'varek', tts: { slot: 16, pitch: 0.7, rate: 0.92 } },
+  armorer: { kokoro: 'bm_fable', speed: 0.98, fx: 'gruff', tts: { slot: 17, pitch: 0.85, rate: 0.96 } },
+  corporal: { kokoro: 'am_liam', speed: 1.04, fx: 'clean', tts: { slot: 18, pitch: 1.05, rate: 1.04 } },
 };
 
 // Text as spoken (subtitle typography -> speech-friendly punctuation).

@@ -17,6 +17,7 @@ export const ASSET_FILES = {
   lmg: 'assets/weapons/lmg_wz28.glb',
   sabre: 'assets/weapons/sabre.glb',
   scabbard: 'assets/weapons/sabre_scabbard.glb',
+  axe: 'assets/weapons/battle_axe.glb',
   helmet_brodie: 'assets/characters/helmet_brodie.glb',
   helmet_crested: 'assets/characters/helmet_crested.glb',
   helmet_deep: 'assets/characters/helmet_deep.glb',

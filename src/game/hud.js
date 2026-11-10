@@ -181,6 +181,49 @@ export class HUD {
     });
   }
 
+  bossBar(name, frac) {
+    const el = $('bossBar');
+    if (frac == null) { el.classList.add('hidden'); return; }
+    el.querySelector('.name').textContent = name;
+    el.querySelector('.fill').style.width = `${Math.max(0, Math.min(1, frac)) * 100}%`;
+    el.classList.remove('hidden');
+  }
+
+  // Quick-time prompt: resolves true if `code` (or a tap) comes within `time` real seconds.
+  qte(label, keyName, codes, time = 1.4) {
+    const el = $('qte');
+    el.className = '';
+    el.querySelector('.key').textContent = keyName;
+    el.querySelector('.label').textContent = label;
+    return new Promise((resolve) => {
+      let done = false;
+      const t0 = performance.now();
+      const finish = (ok) => {
+        if (done) return;
+        done = true;
+        clearInterval(tick);
+        window.removeEventListener('keydown', onKey, true);
+        el.removeEventListener('touchstart', onTap);
+        el.removeEventListener('mousedown', onTap);
+        window.removeEventListener('mousedown', onTap, true);
+        el.classList.add(ok ? 'ok' : 'fail');
+        setTimeout(() => el.classList.add('hidden'), 450);
+        resolve(ok);
+      };
+      const onKey = (e) => { if (codes.includes(e.code)) { e.preventDefault(); e.stopPropagation(); finish(true); } };
+      const onTap = (e) => { e.preventDefault(); finish(true); };
+      window.addEventListener('keydown', onKey, true);
+      el.addEventListener('touchstart', onTap, { passive: false });
+      el.addEventListener('mousedown', onTap);
+      window.addEventListener('mousedown', onTap, true); // pointer-locked clicks
+      const tick = setInterval(() => {
+        const k = (performance.now() - t0) / (time * 1000);
+        el.style.setProperty('--p', Math.max(0, 1 - k));
+        if (k >= 1) finish(false);
+      }, 30);
+    });
+  }
+
   letterbox(on) { this.el.letter.classList.toggle('on', on); }
   skipHint(on, progress = 0) {
     this.el.skip.classList.toggle('show', on);

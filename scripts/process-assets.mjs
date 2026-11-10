@@ -173,6 +173,10 @@ async function prop(srcName, outPath, rules) {
   console.log(`${outPath}  tris=${triCount(doc)}  ${(statSync(outPath).size / 1e6).toFixed(2)}MB  [${parts.join(' ')}]`);
 }
 
+if (run('axe') && existsSync(`${SRC}/battle_axe.glb`)) {
+  await prop('battle_axe', `${OUT}/weapons/battle_axe.glb`, [{ match: /./, keep: 1, simplify: 0.09, error: 0.0015 }]);
+}
+
 if (run('expansion') && existsSync(`${SRC}/expansion`)) {
   const X = (n) => `expansion/${n}`;
   const any = /./;

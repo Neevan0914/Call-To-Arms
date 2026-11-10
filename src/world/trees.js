@@ -270,6 +270,14 @@ export class TreeSystem {
     return { texture: tex };
   }
 
+  setDay() {
+    for (const m of this.impostorMats || []) {
+      m.uniforms.uAmb.value = 0.62;
+      m.uniforms.uSunI.value = 0.75;
+      m.uniforms.uSunCol.value.set(1.0, 0.86, 0.66);
+    }
+  }
+
   // moonlit impostors (Chapter III)
   setNight() {
     for (const m of this.impostorMats || []) {

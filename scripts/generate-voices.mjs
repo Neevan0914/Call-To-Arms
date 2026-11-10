@@ -24,7 +24,7 @@ const argOf = (k) => { const i = process.argv.indexOf(k); return i >= 0 ? proces
 const jsonOut = argOf('--json'), refsDir = argOf('--refs'), rawDir = argOf('--from-raw');
 
 // ---- collect lines ----
-const src = ['src/game/story.js', 'src/game/chapter2.js', 'src/game/chapter3.js'].map((f) => readFileSync(f, 'utf8')).join('\n');
+const src = ['src/game/story.js', 'src/game/chapter2.js', 'src/game/chapter3.js', 'src/game/chapter4.js'].map((f) => readFileSync(f, 'utf8')).join('\n');
 const lines = new Map();
 const str = `(['"])((?:\\\\.|(?!\\2).)*)\\2`;
 const unescape = (t) => t.replace(/\\(['"\\])/g, '$1');
@@ -71,6 +71,7 @@ const FX = {
   marshal: { chain: `${pitch(0.9)},equalizer=f=160:t=q:w=1:g=2,${COMP},aecho=0.8:0.85:18|29:0.22|0.12`, lufs: -17 },
   general: { chain: `${pitch(0.95)},equalizer=f=220:t=q:w=1:g=2,${COMP}`, lufs: -17 },
   colonel: { chain: `${pitch(0.9)},equalizer=f=200:t=q:w=1:g=2.5,${COMP}`, lufs: -17 },
+  varek: { chain: `${pitch(0.88)},equalizer=f=170:t=q:w=1:g=3,equalizer=f=1300:t=q:w=1.2:g=2,${COMP}`, lufs: -17 },
   bandit: { chain: `${pitch(0.86)},equalizer=f=150:t=q:w=1:g=4,equalizer=f=3000:t=q:w=1:g=-3,${COMP}`, lufs: -17 },
 };
 const fxChain = (fx) => `${TRIM},${FX[fx].chain},loudnorm=I=${FX[fx].lufs}:TP=-2:LRA=8,alimiter=limit=0.8:level=false,apad=pad_dur=0.15`;

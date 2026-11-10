@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Humanoid, UNIFORMS } from './humanoid.js';
-import { WEAPONS, buildRifle, buildLMG, buildSword, buildScabbard } from './weapons.js';
+import { WEAPONS, buildRifle, buildLMG, buildSword, buildScabbard, buildAxe } from './weapons.js';
 import { clamp, damp, dampAngle, rand } from '../core/utils.js';
 import { BOUND } from '../world/terrain.js';
 import { SwordPlay } from './swordplay.js';
@@ -33,7 +33,7 @@ export class Player {
       rifle: buildRifle(T), lmg: buildLMG(T), sword: buildSword(T),
       rifleBack: buildRifle(T), lmgBack: buildLMG(T), swordSheath: buildSword(T),
     };
-    const scab = buildScabbard(T);
+    const scab = (this.scabbard = buildScabbard(T));
     scab.rotation.x = 2.55;
     this.h.hipMount.add(scab);
     this.models.swordSheath.rotation.x = 2.55;
@@ -73,6 +73,31 @@ export class Player {
     this.h.setBackModel(this.weapons.lmg.has && id !== 'lmg' ? this.models.lmgBack : null, 1);
     this.models.swordSheath.visible = id !== 'sword';
     if (!silent) this.game.audio.pickup();
+    this.game.hud?.updateWeapon(this);
+  }
+
+  // Chapter IV: the sabre is replaced by a double-bladed battle axe. Same slot and the same
+  // move set, but heavier: slower swings that hit harder and throw enemies further.
+  setMelee(kind) {
+    if (kind !== 'axe' || this.meleeKind === 'axe') return;
+    this.meleeKind = 'axe';
+    const T = this.game.T;
+    const wasHeld = this.current === 'sword';
+    this.models.sword = buildAxe(T);
+    this.h.hipMount.remove(this.models.swordSheath);
+    this.scabbard.visible = false;
+    this.models.swordSheath = buildAxe(T);
+    this.models.swordSheath.rotation.set(2.75, 0, 0.12);
+    this.models.swordSheath.position.set(0, 0.05, -0.05);
+    this.h.hipMount.add(this.models.swordSheath);
+    this.game.atmo.setupScene(this.models.sword);
+    this.game.atmo.setupScene(this.models.swordSheath);
+    WEAPONS.sword.name = 'Double-Bladed Axe';
+    WEAPONS.sword.short = 'AXE';
+    Object.assign(this.sword, { durScale: 1.12, dmgScale: 1.45, knockScale: 1.35 });
+    this.weapons.sword.has = true;
+    if (wasHeld) this.equip('sword', true);
+    else this.models.swordSheath.visible = this.current !== 'sword';
     this.game.hud?.updateWeapon(this);
   }
 

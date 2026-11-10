@@ -121,6 +121,7 @@ export class SwordPlay {
     this.step = 0;
     this.queued = false;
     this.comboTimer = 0;
+    this.durScale = 1; this.dmgScale = 1; this.knockScale = 1; // the axe is heavier
     this._v = new THREE.Vector3();
   }
 
@@ -141,7 +142,7 @@ export class SwordPlay {
     if (!this.move) return;
     const M = this.move, def = M.def;
     const prevT = M.t;
-    M.t += dt / def.dur;
+    M.t += dt / (def.dur * this.durScale);
     const t = Math.min(1, M.t);
     // sound cues
     for (const s of def.sound) if (prevT < s && t >= s) g.audio.swing();
@@ -210,8 +211,8 @@ export class SwordPlay {
       d.normalize();
       if (h.arc < 360 && d.dot(fwd) < cosArc) continue;
       const pt = a.aimPoint(new THREE.Vector3());
-      const killed = a.takeDamage(h.dmg, P, pt, d.clone(), 'chest', true);
-      if (a.knockback) a.knockback(d, h.knock);
+      const killed = a.takeDamage(h.dmg * this.dmgScale, P, pt, d.clone(), 'chest', true);
+      if (a.knockback) a.knockback(d, h.knock * this.knockScale);
       g.audio.slash(pt);
       g.hud.hitmarker(killed);
       hits++;

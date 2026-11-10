@@ -120,6 +120,15 @@ export class Atmosphere {
   // baked impostor lighting and shadows stay consistent); only colours and levels change.
   setNight(renderer, nightTex) {
     const scene = this.scene;
+    if (!this._day) {
+      this._day = {
+        bg: scene.background, bgI: scene.backgroundIntensity, bgRot: scene.backgroundRotation.clone(), envRot: scene.environmentRotation.clone(),
+        env: scene.environment, envI: scene.environmentIntensity, fog: this.fogColor.clone(), fogD: scene.fog.density,
+        hemi: [this.hemi.color.clone(), this.hemi.groundColor.clone(), this.hemi.intensity],
+        sun: [this.sun.color.clone(), this.sun.intensity],
+        csm: this.csm ? this.csm.lights.map((l) => [l.color.clone(), l.intensity]) : null,
+      };
+    }
     scene.background = nightTex;
     scene.backgroundIntensity = 1.0;
     scene.backgroundRotation.set(0, 0, 0);
@@ -136,6 +145,20 @@ export class Atmosphere {
     this.sun.color.copy(moon); this.sun.intensity = 2.8;
     if (this.csm) for (const l of this.csm.lights) { l.color.copy(moon); l.intensity = 2.8; }
     this.night = true;
+  }
+
+  // back to the morning sky (Chapter IV)
+  setDay() {
+    const d = this._day, scene = this.scene;
+    if (!d || !this.night) return;
+    scene.background = d.bg; scene.backgroundIntensity = d.bgI;
+    scene.backgroundRotation.copy(d.bgRot); scene.environmentRotation.copy(d.envRot);
+    scene.environment = d.env; scene.environmentIntensity = d.envI;
+    this.fogColor.copy(d.fog); scene.fog.color.copy(d.fog); scene.fog.density = d.fogD;
+    this.hemi.color.copy(d.hemi[0]); this.hemi.groundColor.copy(d.hemi[1]); this.hemi.intensity = d.hemi[2];
+    this.sun.color.copy(d.sun[0]); this.sun.intensity = d.sun[1];
+    if (this.csm && d.csm) this.csm.lights.forEach((l, i) => { l.color.copy(d.csm[i][0]); l.intensity = d.csm[i][1]; });
+    this.night = false;
   }
 
   setShadowQuality(q) {
