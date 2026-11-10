@@ -365,10 +365,10 @@ export const ChapterFour = {
   // the duelist: approach, wind up, strike, recover, guard; parries some frontal blows
   async duelFight(phaseNo) {
     const g = this.g, p = g.player, A = g.audio, Vk = this.varek;
-    const D = this.duelState = this.duelState || { max: 560, hp: 560 };
+    const D = this.duelState = this.duelState || { max: 2400, hp: 2400 };
     D.phase = phaseNo; D.active = true; D.state = 'approach'; D.t = 0; D.done = false;
     const floor = phaseNo === 1 ? D.max * 0.3 : 1;
-    if (phaseNo === 2) { D.hp = Math.max(D.hp, D.max * 0.55); p.sword.dmgScale = 1.45 * 1.3; } // he gets his second wind; you stop holding back
+    if (phaseNo === 2) { D.hp = Math.max(D.hp, D.max * 0.6); p.sword.dmgScale = 1.45 * 1.25; } // he gets his second wind; you stop holding back
     Vk.invulnerable = false; Vk.role = 'scripted'; Vk.holdFire = true; Vk.faceYaw = null;
     const fast = phaseNo === 2;
     g.hud.bossBar('Varek of Kharsk', D.hp / D.max);
@@ -378,7 +378,7 @@ export const ChapterFour = {
       const toP = p.position.clone().sub(Vk.position).setY(0).normalize();
       const fwd = V(Math.sin(Vk.yaw), 0, Math.cos(Vk.yaw));
       const facing = fwd.dot(toP) > 0.45;
-      if (facing && (D.state === 'guard' || D.state === 'approach') && Math.random() < (fast ? 0.25 : 0.5)) {
+      if (facing && (D.state === 'guard' || D.state === 'approach') && Math.random() < (fast ? 0.35 : 0.55)) {
         A.clang(point || Vk.position);
         g.effects.sparks(point || Vk.aimPoint(new THREE.Vector3()), toP.clone().negate());
         amount *= 0.15;
@@ -387,7 +387,7 @@ export const ChapterFour = {
         if (point && dir) g.effects.blood(point, dir);
         A.impact('flesh', point || Vk.position);
         Vk.h.a.hurt = 1;
-        if (amount > 40) { D.state = 'stagger'; D.t = 0; }
+        if (amount > 110 && Math.random() < 0.4) { D.state = 'stagger'; D.t = 0; } // only big hits rock him
         if (Math.random() < 0.5) A.grunt(Vk.position.clone().setY(Vk.position.y + 1.5), 0.8);
       }
       D.hp = Math.max(floor, D.hp - amount);
@@ -438,7 +438,7 @@ export const ChapterFour = {
             D.hit = true;
             const fwd = V(Math.sin(Vk.yaw), 0, Math.cos(Vk.yaw));
             if (dist < 2.7 && fwd.dot(toP.clone().normalize()) > 0.4 && p.alive && !p.invulnerable) {
-              p.takeDamage(fast ? 21 : 15, Vk, p.aimPoint(new THREE.Vector3()), fwd);
+              p.takeDamage(fast ? 34 : 26, Vk, p.aimPoint(new THREE.Vector3()), fwd);
               A.slash(p.position);
             }
           }
@@ -453,12 +453,12 @@ export const ChapterFour = {
         case 'guard': {
           a.swing = -1;
           if (dist < 2.4) Vk.goTo(Vk.position.clone().addScaledVector(toP.clone().normalize(), -1.5), 1.8);
-          if (D.t > (fast ? 0.5 : 1.0)) { D.state = 'approach'; D.t = 0; }
+          if (D.t > (fast ? 0.35 : 0.7)) { D.state = 'approach'; D.t = 0; }
           break;
         }
         case 'stagger': {
           a.swing = -1; Vk.route = [];
-          if (D.t > 0.45) { D.state = 'guard'; D.t = 0; }
+          if (D.t > 0.35) { D.state = 'approach'; D.t = 0; }
           break;
         }
       }
@@ -513,10 +513,8 @@ export const ChapterFour = {
       const ok = await g.hud.qte('DODGE', 'SPACE', ['Space', 'KeyA', 'KeyD', 'ShiftLeft'], 1.5);
       g.timeScale = 1;
       if (ok) {
-        // sidestep: the blade cuts air
-        const to = p.position.clone().addScaledVector(side, -1.7);
-        this.tween(p.position, 'x', to.x, 0.25); this.tween(p.position, 'z', to.z, 0.25);
-        Vk.h.a.thrust = 0;
+        // leap out of the way: a diving roll sideways, the blade cutting air behind you
+        this.leapAside(side.clone().multiplyScalar(-1));
         A.whiz(p.position.clone().setY(p.position.y + 1.4));
       } else {
         Vk.h.a.thrust = 0;
@@ -526,7 +524,9 @@ export const ChapterFour = {
         A.slash(p.position);
         g.rig.addTrauma(0.6);
       }
-      await this.wait(0.6);
+      await this.wait(1.0);
+      Object.assign(p.h.a, { flip: 0, tuck: 0, moveCrouch: 0 });
+      p.vel.set(0, 0, 0);
       Vk.route = [];
       p.h.a.swordOverride = null;
       p.yaw = Math.atan2(Vk.position.x - p.position.x, Vk.position.z - p.position.z); p.h.root.rotation.y = p.yaw;
@@ -538,6 +538,36 @@ export const ChapterFour = {
     this.endCutscene({ yaw: Math.atan2(-(Vk.position.x - p.position.x), -(Vk.position.z - p.position.z)) });
     g.hud.setObjective('Stop holding back');
     A.setMood('combat');
+  },
+
+  // a diving forward roll in direction jd (game-time driven, so it plays the same in slow motion)
+  leapAside(jd) {
+    const g = this.g, p = g.player, A = g.audio;
+    p.yaw = Math.atan2(jd.x, jd.z); p.h.root.rotation.y = p.yaw;
+    p.vel.set(0, 0, 0);
+    p.vy = 6.6; p.onGround = false;
+    const a = p.h.a;
+    a.flip = 0; a.tuck = 0;
+    A.swing();
+    const t0 = g.time, dur = 0.72, start = p.position.clone(), dist = 3.6;
+    const prev = this.phaseUpdate;
+    this.phaseUpdate = (dt) => {
+      const k = Math.min(1, (g.time - t0) / dur);
+      const e = k * k * (3 - 2 * k);
+      // carry the body sideways along the leap (height comes from the jump itself)
+      const m = Math.min(1, k * 1.15), mv = 1 - (1 - m) * (1 - m);
+      p.position.x = start.x + jd.x * dist * mv;
+      p.position.z = start.z + jd.z * dist * mv;
+      a.flip = Math.PI * 2 * e;
+      a.tuck = Math.sin(Math.PI * Math.min(1, k * 1.1));
+      a.moveCrouch = k > 0.85 ? 0.7 * (1 - (k - 0.85) / 0.15) : 0;
+      if (k >= 1) {
+        a.flip = 0; a.tuck = 0; a.moveCrouch = 0;
+        A.footstep('dirt', null, 1.5);
+        this.phaseUpdate = prev;
+      }
+      if (prev) prev(dt);
+    };
   },
 
   // the end of it: on his knees; the camera turns to the sky
