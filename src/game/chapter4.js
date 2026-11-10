@@ -91,6 +91,19 @@ export const ChapterFour = {
     this.showEnd({ chapter: 'Chapter IV — Iron and Ash', title: 'THE WEIGHT OF THE AXE', sub: 'He surrendered twice. You only believed him once.' });
   },
 
+  // dev/test entry: straight to the road back, axe in hand
+  async chapterFourFromRoad() {
+    this.phase = 'hollin';
+    this.g.post.u.uFade.value = 1;
+    this.setupHollin();
+    this.g.player.setMelee('axe');
+    await this.roadBack();
+    await this.duel();
+    await this.walkHome();
+    await this.homecoming();
+    this.showEnd({ chapter: 'Chapter IV — Iron and Ash', title: 'THE WEIGHT OF THE AXE', sub: 'He surrendered twice. You only believed him once.' });
+  },
+
   // ---------- the works, and the enemy on the road ----------
   async battleIntro() {
     const g = this.g, p = g.player, A = g.audio, u = g.post.u, C = this.colonel;

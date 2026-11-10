@@ -319,6 +319,7 @@ export class Story {
     if (from === 'keep') { await this.chapterTwo(); return; }
     if (from === 'road') { await this.chapterThree(); return; }
     if (from === 'hollin') { await this.chapterFour(); return; }
+    if (from === 'duel') { await this.chapterFourFromRoad(); return; }
     const order = ['intro', 'ambush', 'path', 'fort', 'welcome', 'defend'];
     let i = Math.max(0, order.indexOf(from));
     if (i > 0) this.jumpTo(order[i]);
