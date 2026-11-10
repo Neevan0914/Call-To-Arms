@@ -620,11 +620,17 @@ export const ChapterFour = {
       [DUEL_S - 250, () => this.bark('You', '(…Is this who I was? Before I woke up in that forest?)', COL.you, 4.0, 'youThought', 'thought')],
       [DUEL_S - 274, () => this.bark('You', '(Whoever I was… I\'m not sure I want to find him.)', COL.you, 3.8, 'youThought', 'thought')],
     ];
-    let next = 0;
+    // each thought plays out in full before the next (sprinting doesn't cut them short)
+    let next = 0, freeAt = 0;
     this.phaseUpdate = () => {
       const s = this.roadS();
       g.hud.setMarker(this.roadPoint(Math.max(2, s - 30)).add(V(0, 1.2, 0)));
-      if (next < thoughts.length && s < thoughts[next][0]) { thoughts[next][1](); next++; }
+      if (next < thoughts.length && s < thoughts[next][0] && g.time >= freeAt) {
+        thoughts[next][1]();
+        const clip = g.audio.voiceManifest && Object.values(g.audio.voiceManifest).find((l) => l.cast === 'youThought' && g.hud.el.sub.textContent.includes(l.text.slice(1, 20)));
+        freeAt = g.time + (clip ? clip.dur : 4.2) + 0.8;
+        next++;
+      }
     };
     // the Seventh's camp at the keep gate
     const K = g.kfort, S = K.spots;
@@ -638,7 +644,7 @@ export const ChapterFour = {
       return s;
     });
     for (const s of [this.general, this.corporal, ...this.campMen]) { s.holdFire = true; s.invulnerable = true; }
-    await this.until(() => (p.position.distanceTo(this.corporal.position) < 16 || this.roadS() < 12) && p.alive);
+    await this.until(() => (p.position.distanceTo(this.corporal.position) < 16 || this.roadS() < 12) && p.alive && g.time >= freeAt);
     this.phaseUpdate = null;
     g.hud.setMarker(null);
   },
