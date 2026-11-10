@@ -623,6 +623,252 @@
    "dur": 2.23,
    "cast": "general",
    "text": "…Nobody saw it coming."
+  },
+  "colonel_6757630e": {
+   "file": "colonel_6757630e.mp3",
+   "dur": 5.09,
+   "cast": "colonel",
+   "text": "Two days. You gave us two days, soldier. We used every hour of them."
+  },
+  "colonel_9d1be22d": {
+   "file": "colonel_9d1be22d.mp3",
+   "dur": 6.84,
+   "cast": "colonel",
+   "text": "A moat across the west road. Mines in the fields. Wire on every approach. Let them come."
+  },
+  "sentry1_eecf307d": {
+   "file": "sentry1_eecf307d.mp3",
+   "dur": 3.53,
+   "cast": "sentry1",
+   "text": "Movement on the west road! Kharzan columns — hundreds of them!"
+  },
+  "colonel_ab39a648": {
+   "file": "colonel_ab39a648.mp3",
+   "dur": 4.49,
+   "cast": "colonel",
+   "text": "To your posts! Hold your fire until they reach the mines!"
+  },
+  "soldier_a29a1d0c": {
+   "file": "soldier_a29a1d0c.mp3",
+   "dur": 3.1,
+   "cast": "soldier",
+   "text": "Mines! They've walked into the mines!"
+  },
+  "colonel_16fce0ff": {
+   "file": "colonel_16fce0ff.mp3",
+   "dur": 3.07,
+   "cast": "colonel",
+   "text": "Hold the line! Make them pay for every yard!"
+  },
+  "kharzanFar_4cf239e8": {
+   "file": "kharzanFar_4cf239e8.mp3",
+   "dur": 2.5,
+   "cast": "kharzanFar",
+   "text": "Vesh! Tarak vesh!"
+  },
+  "soldier_a1b988fb": {
+   "file": "soldier_a1b988fb.mp3",
+   "dur": 2.02,
+   "cast": "soldier",
+   "text": "They're running! They're running!"
+  },
+  "colonel_750504c2": {
+   "file": "colonel_750504c2.mp3",
+   "dur": 4.75,
+   "cast": "colonel",
+   "text": "Iron Tide broke on Hollin Ridge. Remember this morning — every one of you."
+  },
+  "colonel_4f378420": {
+   "file": "colonel_4f378420.mp3",
+   "dur": 6.6,
+   "cast": "colonel",
+   "text": "As for you, Seventh: Morrow's legion is camped at Kharsk. You're to report back to your unit."
+  },
+  "armorer_7c0f5aa3": {
+   "file": "armorer_7c0f5aa3.mp3",
+   "dur": 5.9,
+   "cast": "armorer",
+   "text": "That sabre's notched to the hilt, friend. Take this instead — double-bladed, Hollin steel."
+  },
+  "armorer_01863b45": {
+   "file": "armorer_01863b45.mp3",
+   "dur": 2.47,
+   "cast": "armorer",
+   "text": "It won't bend. Neither should you."
+  },
+  "you_cba11ebe": {
+   "file": "you_cba11ebe.mp3",
+   "dur": 0.65,
+   "cast": "you",
+   "text": "…Thank you."
+  },
+  "varek_ba0bf2be": {
+   "file": "varek_ba0bf2be.mp3",
+   "dur": 5.64,
+   "cast": "varek",
+   "text": "You. Velmoran. Seventh Company tabs, a bandage on your head… I know you."
+  },
+  "varek_a1acdae7": {
+   "file": "varek_a1acdae7.mp3",
+   "dur": 4.87,
+   "cast": "varek",
+   "text": "You walked out of Kharsk Keep while it burned. My brothers were in that keep. All of them."
+  },
+  "you_01c05954": {
+   "file": "you_01c05954.mp3",
+   "dur": 1.82,
+   "cast": "you",
+   "text": "I didn't light those fires."
+  },
+  "varek_a5e3c6b0": {
+   "file": "varek_a5e3c6b0.mp3",
+   "dur": 3.22,
+   "cast": "varek",
+   "text": "You walked past them. It is the same thing."
+  },
+  "varek_44e9b600": {
+   "file": "varek_44e9b600.mp3",
+   "dur": 4.92,
+   "cast": "varek",
+   "text": "Put the rifle down. Face me with steel, like a soldier — or are you only brave from a distance?"
+  },
+  "you_8a6b3735": {
+   "file": "you_8a6b3735.mp3",
+   "dur": 1.03,
+   "cast": "you",
+   "text": "…Fine."
+  },
+  "varek_62d1bb7b": {
+   "file": "varek_62d1bb7b.mp3",
+   "dur": 2.76,
+   "cast": "varek",
+   "text": "Enough… enough! I yield. I yield!"
+  },
+  "you_4f17d3b0": {
+   "file": "you_4f17d3b0.mp3",
+   "dur": 2.06,
+   "cast": "you",
+   "text": "Then get up. Go home."
+  },
+  "varek_b9f49901": {
+   "file": "varek_b9f49901.mp3",
+   "dur": 1.03,
+   "cast": "varek",
+   "text": "For Kharsk!"
+  },
+  "you_ee2bc157": {
+   "file": "you_ee2bc157.mp3",
+   "dur": 1.99,
+   "cast": "you",
+   "text": "You should have stayed down."
+  },
+  "varek_635ad269": {
+   "file": "varek_635ad269.mp3",
+   "dur": 2.71,
+   "cast": "varek",
+   "text": "Go on, then… finish it. Like you finished Kharsk."
+  },
+  "youThought_02676366": {
+   "file": "youThought_02676366.mp3",
+   "dur": 5.28,
+   "cast": "youThought",
+   "text": "(He surrendered. Then he went for my throat. I didn't have a choice.)"
+  },
+  "youThought_45fe507b": {
+   "file": "youThought_45fe507b.mp3",
+   "dur": 4.94,
+   "cast": "youThought",
+   "text": "(…Did I? He was on his knees. So were the men at Kharsk.)"
+  },
+  "youThought_92964e72": {
+   "file": "youThought_92964e72.mp3",
+   "dur": 4.32,
+   "cast": "youThought",
+   "text": "(I called Morrow's men murderers for that. What does that make me?)"
+  },
+  "youThought_a567d812": {
+   "file": "youThought_a567d812.mp3",
+   "dur": 6.46,
+   "cast": "youThought",
+   "text": "(The patrol in the clearing. Five men. I never even saw their faces.)"
+  },
+  "youThought_78e40e4d": {
+   "file": "youThought_78e40e4d.mp3",
+   "dur": 8.42,
+   "cast": "youThought",
+   "text": "(The scouts on the road. The walls at Velmar. The checkpoint. The bandits. I stopped counting somewhere.)"
+  },
+  "youThought_9a9f6d61": {
+   "file": "youThought_9a9f6d61.mp3",
+   "dur": 4.44,
+   "cast": "youThought",
+   "text": "(Every one of them had a name. I don't even have mine.)"
+  },
+  "youThought_5e52c84b": {
+   "file": "youThought_5e52c84b.mp3",
+   "dur": 2.54,
+   "cast": "youThought",
+   "text": "(Maybe that's why it comes so easy.)"
+  },
+  "youThought_e428d552": {
+   "file": "youThought_e428d552.mp3",
+   "dur": 5.47,
+   "cast": "youThought",
+   "text": "(They'd have killed me. Every one of them. That's what I keep telling myself.)"
+  },
+  "youThought_f7e7855d": {
+   "file": "youThought_f7e7855d.mp3",
+   "dur": 4.82,
+   "cast": "youThought",
+   "text": "(But he was right about one thing. I walked past those fires.)"
+  },
+  "youThought_ce18ca5c": {
+   "file": "youThought_ce18ca5c.mp3",
+   "dur": 4.37,
+   "cast": "youThought",
+   "text": "(…Is this who I was? Before I woke up in that forest?)"
+  },
+  "youThought_6830f91e": {
+   "file": "youThought_6830f91e.mp3",
+   "dur": 3.34,
+   "cast": "youThought",
+   "text": "(Whoever I was… I'm not sure I want to find him.)"
+  },
+  "corporal_e99c6349": {
+   "file": "corporal_e99c6349.mp3",
+   "dur": 4.06,
+   "cast": "corporal",
+   "text": "Seventh! You made it back! They're saying you held Hollin Ridge!"
+  },
+  "you_965e346f": {
+   "file": "you_965e346f.mp3",
+   "dur": 1.1,
+   "cast": "you",
+   "text": "…Something like that."
+  },
+  "general_ae62c7f3": {
+   "file": "general_ae62c7f3.mp3",
+   "dur": 3.86,
+   "cast": "general",
+   "text": "Hollin Ridge stands, I hear. Iron Tide broke on their wire."
+  },
+  "general_45bd06b4": {
+   "file": "general_45bd06b4.mp3",
+   "dur": 1.97,
+   "cast": "general",
+   "text": "And I hear my seal was broken."
+  },
+  "you_bec58599": {
+   "file": "you_bec58599.mp3",
+   "dur": 1.42,
+   "cast": "you",
+   "text": "It was."
+  },
+  "general_d79d0c9f": {
+   "file": "general_d79d0c9f.mp3",
+   "dur": 3.67,
+   "cast": "general",
+   "text": "Get some sleep, soldier. Tomorrow, you and I are going to talk."
   }
  }
 }
