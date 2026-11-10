@@ -1,4 +1,4 @@
-# Call To Arms — Chapters I–III
+# Call To Arms — Chapters I–IV
 
 A third-person 3D action game that runs in the browser (Three.js + WebGL2). There are
 no external assets: the terrain, forest, fort, soldiers, weapons, textures, flags,
@@ -60,7 +60,27 @@ Night falls under a sky of a great ringed planet and its moons.
    - *Keep the secret:* you tell the General the plans were delivered, and you're there
      when word comes that Hollin Ridge has fallen.
 
-Start straight at Chapter III with `?skip=road`.
+Start straight at Chapter III with `?skip=road`. The two endings that stop here have a
+**Make a different choice** button that takes you back to the campfire.
+
+## Story (Chapter IV: *Iron and Ash*, after warning Hollin Ridge)
+
+1. **The third day.** The warning bought two days, and Hollin Ridge used them: a sandbag
+   trench, a flooded moat, sharpened stakes, barbed wire and a minefield on the west road.
+2. **Iron Tide.** Three Kharzan waves come out of the treeline. The mines and the wire
+   break them while you hold the trench with the Rkm M28 (ammo crates in the trench refill
+   you). The survivors run.
+3. **The axe.** The armorer replaces your notched sabre with a **double-bladed battle
+   axe**. It uses the sabre's moves (combo, spins, flips) but swings slower and hits harder.
+4. **The road back.** Walking west to rejoin the Seventh at Kharsk, you're stopped by
+   **Varek**, whose brothers died in the keep. He makes you put the rifle away: steel only.
+   He parries, ripostes and circles. When he's beaten he yields… then pulls a hidden dagger.
+   **Dodge** (Space, A, D or tap) and stop holding back.
+5. **The end of it.** On his knees, he dares you to finish it like Kharsk. You do; the
+   camera looks away. The walk home is spent arguing with every life you've taken since
+   the clearing, and the General is waiting at camp: he knows you broke his seal.
+
+Start straight at Chapter IV with `?skip=hollin` (or `?skip=duel` for the road back).
 
 ## Running it
 
