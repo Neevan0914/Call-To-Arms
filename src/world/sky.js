@@ -25,7 +25,7 @@ export class Atmosphere {
   constructor(scene, renderer, quality, camera, { sky: skyTex = null, hdr = null } = {}) {
     this.scene = scene;
     this.camera = camera;
-    const elevation = 17, azimuth = 128;
+    const elevation = 26.5, azimuth = 128; // matches the painted sun in sky_morning
     const phi = THREE.MathUtils.degToRad(90 - elevation);
     const theta = THREE.MathUtils.degToRad(azimuth);
     this.sunDir = new THREE.Vector3().setFromSphericalCoords(1, phi, theta);
@@ -45,7 +45,7 @@ export class Atmosphere {
       if (hdr) {
         hdr.mapping = THREE.EquirectangularReflectionMapping;
         scene.environment = pmrem.fromEquirectangular(hdr).texture;
-        scene.environmentIntensity = 0.62;
+        scene.environmentIntensity = 0.78;
       } else {
         scene.environment = pmrem.fromEquirectangular(skyTex).texture;
         scene.environmentIntensity = 0.5;
@@ -73,7 +73,7 @@ export class Atmosphere {
     }
     pmrem.dispose();
 
-    this.sun = new THREE.DirectionalLight(0xffd6a6, 3.4);
+    this.sun = new THREE.DirectionalLight(0xffdcb2, 3.9);
     this.sun.castShadow = true;
     this.shadowExtent = 60;
     const cam = this.sun.shadow.camera;
@@ -90,12 +90,12 @@ export class Atmosphere {
       const high = quality === 'high';
       this.csm = new CSM({
         camera, parent: scene, cascades: high ? 3 : 2, maxFar: high ? 190 : 120, mode: 'practical',
-        shadowMapSize: high ? 2048 : 1536, lightDirection: this.sunDir.clone().negate(), lightIntensity: 3.4,
+        shadowMapSize: high ? 2048 : 1536, lightDirection: this.sunDir.clone().negate(), lightIntensity: 3.9,
         lightNear: 1, lightFar: 700, lightMargin: 180, shadowBias: -0.00015,
       });
       this.csm.fade = true;
       for (const l of this.csm.lights) {
-        l.color.set(0xffd6a6);
+        l.color.set(0xffdcb2);
         l.shadow.normalBias = 0.05;
         l.shadow.radius = 2;
       }
@@ -105,10 +105,10 @@ export class Atmosphere {
       scene.add(this.sun.target);
     }
 
-    this.hemi = new THREE.HemisphereLight(0xb9d0e6, 0x4a3b26, skyTex ? 0.75 : 0.55);
+    this.hemi = new THREE.HemisphereLight(0xbfd6ee, 0x5e4c32, skyTex ? 1.0 : 0.7); // sky fill + warm ground bounce
     scene.add(this.hemi);
 
-    scene.fog = new THREE.FogExp2(this.fogColor, 0.0048);
+    scene.fog = new THREE.FogExp2(this.fogColor, 0.0037);
 
     // light-space basis for texel snapping
     this._right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), this.sunDir).normalize();

@@ -318,9 +318,47 @@ export const ChapterFour = {
 
   // ---------- the duel ----------
   async duel() {
-    const g = this.g, p = g.player, A = g.audio, u = g.post.u, Vk = this.varek;
     this.phase = 'duel';
-    // the challenge
+    // each round restarts from the cutscene before it, everyone at full health
+    for (;;) { await this.duelChallenge(); if (await this.duelFight(1)) break; await this.duelRetry(1); }
+    for (;;) { await this.betrayal(); if (await this.duelFight(2)) break; await this.duelRetry(2); }
+    await this.execution();
+  },
+
+  // you fell: fade out, then reset both fighters to the start of that round
+  async duelRetry(round) {
+    const g = this.g, p = g.player, Vk = this.varek, D = this.duelState;
+    D.active = false; D.done = false;
+    this.phaseUpdate = null;
+    Vk.route = []; Vk.h.a.swing = -1;
+    g.hud.bossBar(null);
+    g.controlsEnabled = false;
+    const ds = document.getElementById('deathScreen');
+    await this.wait(1.2);
+    ds.classList.remove('hidden');
+    await this.wait(2.6);
+    for (const m of this._duelDrops || []) g.scene.remove(m);
+    this._duelDrops = [];
+    const vs = this.roadPoint(DUEL_S), ps = this.roadPoint(DUEL_S + 7);
+    Vk.position.copy(vs); Vk.kb.set(0, 0, 0); Vk.vel.set(0, 0, 0); Vk.stunT = 0;
+    Object.assign(Vk.h.a, { kneel: 0, slump: 0, handsUp: 0, swing: -1, hurt: 0, thrust: -1 });
+    Vk.setWeapon('sword');
+    g.atmo.setupScene(Vk.h.root);
+    Vk.invulnerable = true;
+    Vk.yaw = Math.atan2(ps.x - vs.x, ps.z - vs.z); Vk.h.root.rotation.y = Vk.yaw;
+    D.hp = round === 1 ? D.max : D.max * 0.6;
+    p.revive(ps, Math.atan2(vs.x - ps.x, vs.z - ps.z));
+    p.hp = p.maxHp;
+    p.sword.dmgScale = 1.45;
+    p.equip('sword', true);
+    Object.assign(p.h.a, { flip: 0, tuck: 0, moveCrouch: 0, swordOverride: null });
+    g.hud.updateWeapon(p);
+    ds.classList.add('hidden');
+  },
+
+  // Varek's challenge (replayed after a death in round one)
+  async duelChallenge() {
+    const g = this.g, p = g.player, A = g.audio, u = g.post.u, Vk = this.varek;
     await this.cutscene(async () => {
       A.setMood('tension');
       p.vel.set(0, 0, 0);
@@ -349,17 +387,13 @@ export const ChapterFour = {
       await this.wait(0.6);
     }, { canSkip: true });
     // steel only
-    this.stash4 = { rifle: p.weapons.rifle.has };
+    if (!this.stash4) this.stash4 = { rifle: p.weapons.rifle.has };
     p.weapons.rifle.has = false;
     p.equip('sword', true);
     g.hud.updateWeapon(p);
     this.endCutscene({ yaw: Math.atan2(-(Vk.position.x - p.position.x), -(Vk.position.z - p.position.z)) });
     g.hud.setObjective('Defeat Varek — steel only');
     A.setMood('combat');
-    await this.duelFight(1);
-    await this.betrayal();
-    await this.duelFight(2);
-    await this.execution();
   },
 
   // the duelist: approach, wind up, strike, recover, guard; parries some frontal blows
@@ -396,13 +430,7 @@ export const ChapterFour = {
       return false;
     };
     let variant = 0;
-    this.checkpoint = async () => {
-      // knocked down: get back up and go again (his wounds stay)
-      p.revive(p.position.clone(), p.yaw);
-      p.hp = p.maxHp;
-      D.state = 'guard'; D.t = 0;
-      Vk.position.copy(this.ground(p.position.x + Math.sin(p.yaw) * 5, p.position.z + Math.cos(p.yaw) * 5));
-    };
+    this.checkpoint = null; // a death restarts the round (see duelRetry)
     this.phaseUpdate = (dt) => {
       if (!D.active) { Vk.route = []; return; }
       const toP = p.position.clone().sub(Vk.position).setY(0);
@@ -463,11 +491,13 @@ export const ChapterFour = {
         }
       }
     };
-    await this.until(() => D.done && !this.respawning && p.alive);
+    await this.until(() => (D.done && p.alive) || !p.alive);
     this.phaseUpdate = null;
     this.checkpoint = null;
     Vk.route = []; Vk.h.a.swing = -1;
     Vk.invulnerable = true;
+    D.active = false;
+    return p.alive;
   },
 
   // he yields… and goes for the knife
@@ -487,7 +517,7 @@ export const ChapterFour = {
       // he drops the sabre and goes to his knees
       const sab = Vk.h.weaponModel;
       Vk.h.setWeaponModel(null);
-      if (sab) { sab.position.copy(this.ground(vp.x + 0.6, vp.z + 0.4)).add(V(0, 0.04, 0)); sab.rotation.set(0, rand(0, 6), Math.PI / 2); g.scene.add(sab); }
+      if (sab) { sab.position.copy(this.ground(vp.x + 0.6, vp.z + 0.4)).add(V(0, 0.04, 0)); sab.rotation.set(0, rand(0, 6), Math.PI / 2); g.scene.add(sab); (this._duelDrops || (this._duelDrops = [])).push(sab); }
       Vk.h.a.kneel = 1; Vk.h.a.handsUp = 0.7;
       g.hud.bossBar(null);
       this.shot((t, o) => { o.look.copy(this.faceCam(Vk, o.pos, 1.6, 0.4, 0.15)); o.look.y -= 0.2; o.fov = 40; }, 5);

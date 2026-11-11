@@ -45,7 +45,9 @@ const GradeShader = {
       float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
       col = mix(col, col * vec3(0.94, 1.0, 1.06), (1.0 - smoothstep(0.0, 0.45, l)) * 0.35);
       col = mix(col, col * vec3(1.06, 1.0, 0.92), smoothstep(0.5, 1.0, l) * 0.3);
-      col = (col - 0.5) * 1.04 + 0.5;
+      col = (col - 0.5) * 1.06 + 0.5;
+      float l2 = dot(col, vec3(0.2126, 0.7152, 0.0722));
+      col = mix(vec3(l2), col, 1.1); // a touch richer colour
       col = mix(col, vec3(l), uDesat);
       col = mix(col, col * vec3(1.25, 0.7, 0.65), uRedTint);
       // vignette
