@@ -191,3 +191,5 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0.05em 0.4em; margin: 0 
 #qte .ring { width: 180px; height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--accent) calc(var(--p, 1) * 100%), rgba(255,255,255,0.15) 0); }
 #qte.ok .key { background: #9fc7a8; } #qte.fail .key { background: #c4423a; color: #fff; }
 @keyframes qtePop { from { transform: translate(-50%, -50%) scale(1.4); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+
+#buildStamp { position: absolute; right: 14px; bottom: 10px; font: 500 11px 'Inter'; color: var(--dim); letter-spacing: 0.05em; }

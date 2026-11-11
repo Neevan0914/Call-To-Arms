@@ -59,3 +59,6 @@ async function boot() {
 }
 
 boot();
+
+// which build is this? (title screen, bottom right)
+{ const el = document.getElementById('buildStamp'); if (el) el.textContent = `Build ${typeof __BUILD__ !== 'undefined' ? __BUILD__ : 'dev'}`; }
