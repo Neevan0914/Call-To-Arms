@@ -665,8 +665,19 @@ export const ChapterFour = {
 
   // ---------- the long walk home: arguing with yourself ----------
   async walkHome() {
-    const g = this.g, p = g.player;
+    const g = this.g, p = g.player, u = g.post.u;
     this.phase = 'walkHome';
+    // the day burns down: fade, and walk home into the sunset
+    if (g.skies && g.skies.sunset) {
+      g.controlsEnabled = false;
+      this.tween(u.uFade, 'value', 1, 1.4);
+      await this.wait(1.5);
+      g.setSunset();
+      g.hud.titleCard('DUSK', 'The road to Kharsk', 4);
+      this.tween(u.uFade, 'value', 0, 2.2);
+      await this.wait(1.0);
+      g.controlsEnabled = true;
+    }
     g.hud.setObjective('Return to the Seventh at Kharsk Keep');
     const thoughts = [
       [DUEL_S - 22, () => this.bark('You', '(…Did I? He was on his knees. So were the men at Kharsk.)', COL.you, 4.2, 'youThought', 'thought')],

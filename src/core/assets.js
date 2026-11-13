@@ -32,8 +32,13 @@ export const ASSET_FILES = {
 };
 
 // Ground texture sets (albedo + OpenGL normal map, ~1 m per tile) and the sky panorama.
-export const TEXTURE_SETS = ['grass', 'dirt', 'forest_floor', 'rock', 'moss', 'gravel'];
-export const SKY_FILES = { ldr: 'assets/sky/sky_morning.jpg', hdr: 'assets/sky/sky_morning_2k.hdr' };
+export const TEXTURE_SETS = ['grass', 'dirt', 'forest_floor', 'rock', 'moss'];
+// Sky panoramas from the texture pack. sunU/sunEl: where the sun sits in each image
+// (measured from the HDR: brightest texel), so the world's light can be lined up with it.
+export const SKY_FILES = {
+  day: { ldr: 'assets/sky/sky_day_4k.jpg', hdr: 'assets/sky/sky_day_2k.hdr', sunU: 0.6104, sunEl: 38.5 },
+  sunset: { ldr: 'assets/sky/sky_sunset_4k.jpg', hdr: 'assets/sky/sky_sunset_2k.hdr', sunU: 0.2222, sunEl: 2.8 },
+};
 
 export function assetUrl(path) {
   const embedded = (typeof window !== 'undefined' && window.__CTA_ASSETS) || null;
@@ -45,24 +50,26 @@ export async function loadTextures(onProgress) {
   const out = {};
   const jobs = [];
   for (const n of TEXTURE_SETS) {
-    for (const k of ['albedo', 'normal']) {
-      jobs.push(loader.loadAsync(assetUrl(`assets/textures/${n}_${k}.jpg`)).then((t) => {
+    for (const k of ['ca', 'nrh']) {
+      jobs.push(loader.loadAsync(assetUrl(`assets/textures/${n}_${k}.webp`)).then((t) => {
         t.wrapS = t.wrapT = THREE.RepeatWrapping;
-        t.colorSpace = k === 'albedo' ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+        t.colorSpace = k === 'ca' ? THREE.SRGBColorSpace : THREE.NoColorSpace;
         t.anisotropy = 8;
         (out[n] = out[n] || {})[k] = t;
       }).catch(() => {}));
     }
   }
-  let sky = null;
-  jobs.push(loader.loadAsync(assetUrl(SKY_FILES.ldr)).then((t) => { sky = t; }).catch(() => {}));
-  let hdr = null;
-  jobs.push(new RGBELoader().loadAsync(assetUrl(SKY_FILES.hdr)).then((t) => { hdr = t; }).catch(() => {}));
+  const skies = {};
+  for (const [name, f] of Object.entries(SKY_FILES)) {
+    jobs.push(loader.loadAsync(assetUrl(f.ldr)).then((t) => { (skies[name] = skies[name] || { ...f }).ldr = t; }).catch(() => {}));
+    jobs.push(new RGBELoader().loadAsync(assetUrl(f.hdr)).then((t) => { (skies[name] = skies[name] || { ...f }).hdr = t; }).catch(() => {}));
+  }
   let done = 0;
   jobs.forEach((j) => j.then(() => onProgress && onProgress(++done / jobs.length)));
   await Promise.all(jobs);
-  const complete = Object.values(out).filter((s) => s.albedo && s.normal).length;
-  return { ground: complete === TEXTURE_SETS.length ? out : null, sky, hdr };
+  const complete = Object.values(out).filter((s) => s.ca && s.nrh).length;
+  const day = skies.day || {};
+  return { ground: complete === TEXTURE_SETS.length ? out : null, sky: day.ldr || null, hdr: day.hdr || null, skies };
 }
 
 export async function loadAssets(onProgress) {

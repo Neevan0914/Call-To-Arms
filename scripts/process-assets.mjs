@@ -7,7 +7,7 @@
 import { NodeIO } from '@gltf-transform/core';
 import { weld, prune, dedup, simplifyPrimitive, compactPrimitive, mergeDocuments, unpartition } from '@gltf-transform/functions';
 import { MeshoptSimplifier } from 'meshoptimizer';
-import { mkdirSync, statSync, existsSync } from 'node:fs';
+import { mkdirSync, statSync, existsSync, readFileSync } from 'node:fs';
 
 await MeshoptSimplifier.ready;
 const io = new NodeIO();
@@ -128,8 +128,29 @@ async function tree(name, lods) {
   report.forEach((r) => console.log(r));
 }
 
+// Attach the texture pack's extra maps (model_textures/<model>/<material>_albedo|normal.jpg)
+// to materials that don't carry them yet (the soldiers' fabric normals, skin, leather, boots).
+function attachTextures(doc, model) {
+  const dir = `${SRC}/model_textures/${model}`;
+  if (!existsSync(dir)) return [];
+  const added = [];
+  for (const mat of doc.getRoot().listMaterials()) {
+    const n = mat.getName();
+    const tex = (slot) => {
+      const f = `${dir}/${n}_${slot}.jpg`;
+      if (!existsSync(f)) return null;
+      return doc.createTexture(`${n}_${slot}`).setImage(readFileSync(f)).setMimeType('image/jpeg');
+    };
+    if (!mat.getBaseColorTexture()) { const t = tex('albedo'); if (t) { mat.setBaseColorTexture(t); added.push(`${n}_albedo`); } }
+    if (!mat.getNormalTexture()) { const t = tex('normal'); if (t) { mat.setNormalTexture(t); mat.setNormalScale(1.0); added.push(`${n}_normal`); } }
+  }
+  return added;
+}
+
 async function simple(name, dir, ratio, error, outName = name) {
   const doc = await io.read(`${SRC}/${name}.glb`);
+  const added = attachTextures(doc, name);
+  if (added.length) console.log(`  + ${added.join(' ')}`);
   await doc.transform(weld());
   for (const mesh of doc.getRoot().listMeshes()) for (const prim of mesh.listPrimitives()) simplifyPrim(prim, ratio, error);
   await doc.transform(prune(), dedup());

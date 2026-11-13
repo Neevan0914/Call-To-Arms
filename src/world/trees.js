@@ -270,6 +270,15 @@ export class TreeSystem {
     return { texture: tex };
   }
 
+  setSunset(dir) {
+    for (const m of this.impostorMats || []) {
+      m.uniforms.uSunDir.value.copy(dir);
+      m.uniforms.uAmb.value = 0.5;
+      m.uniforms.uSunI.value = 0.85;
+      m.uniforms.uSunCol.value.set(1.0, 0.66, 0.42);
+    }
+  }
+
   setDay() {
     for (const m of this.impostorMats || []) {
       m.uniforms.uAmb.value = 0.62;

@@ -22,10 +22,12 @@ function horizonColor(img, sunDir, rotY) {
 // Golden early-morning atmosphere: physical sky, IBL from the sky, warm sun with
 // a texel-snapped shadow frustum that follows the focus point, and haze.
 export class Atmosphere {
-  constructor(scene, renderer, quality, camera, { sky: skyTex = null, hdr = null } = {}) {
+  constructor(scene, renderer, quality, camera, { sky: skyTex = null, hdr = null, sunU = 0.5, sunEl = 26.5 } = {}) {
     this.scene = scene;
     this.camera = camera;
-    const elevation = 26.5, azimuth = 128; // matches the painted sun in sky_morning
+    // the light comes from where the panorama's sun is painted (elevation), at our world azimuth
+    const elevation = sunEl, azimuth = 128;
+    this.sunU = sunU;
     const phi = THREE.MathUtils.degToRad(90 - elevation);
     const theta = THREE.MathUtils.degToRad(azimuth);
     this.sunDir = new THREE.Vector3().setFromSphericalCoords(1, phi, theta);
@@ -38,7 +40,7 @@ export class Atmosphere {
       skyTex.colorSpace = THREE.SRGBColorSpace;
       scene.background = skyTex;
       scene.backgroundIntensity = 1.2;
-      const rotY = -Math.atan2(this.sunDir.z, this.sunDir.x);
+      const rotY = (sunU - 0.5) * Math.PI * 2 - Math.atan2(this.sunDir.z, this.sunDir.x);
       scene.backgroundRotation.set(0, rotY, 0);
       scene.environmentRotation.set(0, rotY, 0);
       this.fogColor.copy(horizonColor(skyTex.image, this.sunDir, rotY));
@@ -145,6 +147,37 @@ export class Atmosphere {
     this.sun.color.copy(moon); this.sun.intensity = 2.8;
     if (this.csm) for (const l of this.csm.lights) { l.color.copy(moon); l.intensity = 2.8; }
     this.night = true;
+  }
+
+  // Swap the sky at runtime (Chapter IV's sunset walk): new panorama + IBL, the light moves
+  // to the painted sun (azimuth `az`), with its elevation kept above `minEl` for shadows.
+  setSky(renderer, { ldr, hdr, sunU, sunEl }, { az = 128, minEl = 9, sunColor = 0xffa868, sunI = 3.2, hemi = [0x9aa8c8, 0x5a3c2a, 0.85], envI = 0.95, fogD = 0.0034 } = {}) {
+    const scene = this.scene;
+    const el = Math.max(minEl, sunEl);
+    this.sunDir.setFromSphericalCoords(1, THREE.MathUtils.degToRad(90 - el), THREE.MathUtils.degToRad(az));
+    const skyDirNoClamp = new THREE.Vector3().setFromSphericalCoords(1, THREE.MathUtils.degToRad(90 - sunEl), THREE.MathUtils.degToRad(az));
+    ldr.mapping = THREE.EquirectangularReflectionMapping;
+    ldr.colorSpace = THREE.SRGBColorSpace;
+    const rotY = (sunU - 0.5) * Math.PI * 2 - Math.atan2(skyDirNoClamp.z, skyDirNoClamp.x);
+    scene.background = ldr; scene.backgroundIntensity = 1.15;
+    scene.backgroundRotation.set(0, rotY, 0); scene.environmentRotation.set(0, rotY, 0);
+    if (hdr) {
+      hdr.mapping = THREE.EquirectangularReflectionMapping;
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      scene.environment = pmrem.fromEquirectangular(hdr).texture;
+      pmrem.dispose();
+    }
+    scene.environmentIntensity = envI;
+    this.fogColor.copy(horizonColor(ldr.image, this.sunDir, rotY));
+    scene.fog.color.copy(this.fogColor); scene.fog.density = fogD;
+    this.hemi.color.set(hemi[0]); this.hemi.groundColor.set(hemi[1]); this.hemi.intensity = hemi[2];
+    this.sun.color.set(sunColor); this.sun.intensity = sunI;
+    if (this.csm) {
+      this.csm.lightDirection.copy(this.sunDir).negate();
+      for (const l of this.csm.lights) { l.color.set(sunColor); l.intensity = sunI; }
+    }
+    this._right.crossVectors(new THREE.Vector3(0, 1, 0), this.sunDir).normalize();
+    this._up.crossVectors(this.sunDir, this._right).normalize();
   }
 
   // back to the morning sky (Chapter IV)

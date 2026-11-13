@@ -117,7 +117,9 @@ export class Game {
     this.physics = new CollisionWorld(this.terrain);
 
     progress(0.4, 'Lighting the morning…'); await nextFrame();
-    this.atmo = new Atmosphere(this.scene, renderer, Q.shadow, this.camera, { sky: tex.sky, hdr: tex.hdr });
+    this.skies = tex.skies || {};
+    const daySky = this.skies.day || {};
+    this.atmo = new Atmosphere(this.scene, renderer, Q.shadow, this.camera, { sky: tex.sky, hdr: tex.hdr, sunU: daySky.sunU ?? 0.5, sunEl: daySky.sunEl ?? 26.5 });
     SUN_UNIFORMS.uSunDir.value.copy(this.atmo.sunDir);
 
     progress(0.5, 'Growing the Thornwood…'); await nextFrame();
@@ -206,6 +208,22 @@ export class Game {
     this.effects.setDay();
     this.audio.setDay();
     this.renderer.toneMappingExposure = 0.95;
+  }
+
+  // Chapter IV: the walk home at sunset, the sun low in the west ahead of you
+  setSunset() {
+    const sky = this.skies && this.skies.sunset;
+    if (!sky || !sky.ldr || this.sunset) return;
+    this.sunset = true;
+    this.atmo.setSky(this.renderer, sky, { az: 262 });
+    const d = this.atmo.sunDir;
+    SUN_UNIFORMS.uSunDir.value.copy(d);
+    SUN_UNIFORMS.uSunCol.value.set(1.0, 0.62, 0.36).multiplyScalar(2.4);
+    if (this.vegetation.treeSystem) this.vegetation.treeSystem.setSunset(d);
+    this.post.world.sunDir.copy(d);
+    this.post.world.sunColor.set(1.0, 0.62, 0.35);
+    this.post.world.rayScale = 1.3;
+    this.renderer.toneMappingExposure = 1.0;
   }
 
   setQuality(q) {

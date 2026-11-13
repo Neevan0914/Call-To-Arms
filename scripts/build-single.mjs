@@ -27,6 +27,7 @@ const walk = (dir, rel) => {
     if (statSync(p).isDirectory()) walk(p, r);
     else if (f.endsWith('.glb')) embedded[`assets/${r}`] = `data:model/gltf-binary;base64,${readFileSync(p).toString('base64')}`;
     else if (f.endsWith('.mp3')) embedded[`assets/${r}`] = `data:audio/mpeg;base64,${readFileSync(p).toString('base64')}`;
+    else if (f.endsWith('.webp')) embedded[`assets/${r}`] = `data:image/webp;base64,${readFileSync(p).toString('base64')}`;
     else if (f.endsWith('.jpg')) embedded[`assets/${r}`] = `data:image/jpeg;base64,${readFileSync(p).toString('base64')}`;
     else if (f.endsWith('.hdr')) embedded[`assets/${r}`] = `data:application/octet-stream;base64,${readFileSync(p).toString('base64')}`;
     else if (f.endsWith('.json')) embedded[`assets/${r}`] = `data:application/json;base64,${readFileSync(p).toString('base64')}`;
