@@ -9,6 +9,12 @@
   <link rel="stylesheet" href="./src/style.css" />
 </head>
 <body>
+  <!-- ===== Studio intro: plays over the loading, then fades into the title menu ===== -->
+  <div id="intro">
+    <video id="introVideo" src="./intro/calltoarms-intro.mp4" muted playsinline autoplay preload="auto"></video>
+    <div class="intro-load"><div class="bar"><div id="introFill"></div></div></div>
+    <div class="intro-skip">Click or press any key to skip</div>
+  </div>
   <div id="app"></div>
 
   <!-- ===== HUD (mildly transparent) ===== -->

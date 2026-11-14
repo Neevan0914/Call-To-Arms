@@ -193,3 +193,14 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0.05em 0.4em; margin: 0 
 @keyframes qtePop { from { transform: translate(-50%, -50%) scale(1.4); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
 
 #buildStamp { position: absolute; right: 14px; bottom: 10px; font: 500 11px 'Inter'; color: var(--dim); letter-spacing: 0.05em; }
+
+/* studio intro (covers the loading screen) */
+#intro { position: fixed; inset: 0; z-index: 50; background: #17181a; display: flex; align-items: center; justify-content: center; transition: opacity 0.9s ease; cursor: pointer; }
+#intro.out { opacity: 0; pointer-events: none; }
+#intro video { width: 100%; height: 100%; object-fit: contain; background: #17181a; }
+#intro .intro-load { position: absolute; left: 50%; bottom: 12vh; transform: translateX(-50%); width: min(260px, 60vw); opacity: 0; transition: opacity 0.6s; }
+#intro.waiting .intro-load { opacity: 1; }
+#intro .intro-load .bar { height: 3px; border-radius: 2px; background: rgba(160, 165, 170, 0.18); overflow: hidden; }
+#intro #introFill { height: 100%; width: 0; background: #6fbf5a; transition: width 0.3s; }
+#intro .intro-skip { position: absolute; right: 22px; bottom: 18px; font: 500 12px 'Inter', system-ui, sans-serif; color: rgba(200, 205, 210, 0.35); letter-spacing: 0.04em; }
+#intro.waiting .intro-skip { display: none; }

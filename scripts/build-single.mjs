@@ -34,6 +34,13 @@ const walk = (dir, rel) => {
   }
 };
 if (existsSync('public/assets')) walk('public/assets', '');
+// The intro video plays while everything else loads: inline it right in its <video> tag
+// so it can start before the big asset script below has been parsed.
+const introPath = 'public/intro/calltoarms-intro.mp4';
+if (existsSync(introPath)) {
+  const uri = `data:video/mp4;base64,${readFileSync(introPath).toString('base64')}`;
+  html = html.replace('src="./intro/calltoarms-intro.mp4"', () => `src="${uri}"`);
+}
 const assetScript = `<script>window.__CTA_ASSETS=${JSON.stringify(embedded)};</script>`;
 html = html.replace('<script type="module">', () => `${assetScript}\n<script type="module">`);
 console.log(`embedded ${Object.keys(embedded).length} asset files`);

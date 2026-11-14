@@ -3,6 +3,38 @@ import { Game } from './game/Game.js';
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 
+// ---- studio intro: plays while the game loads, then fades into the menu ----
+const intro = (() => {
+  const el = $('intro'), vid = $('introVideo');
+  let videoDone = false, loaded = false, gone = false;
+  const reveal = () => {
+    if (gone || !videoDone || !loaded) return;
+    gone = true;
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 1000);
+  };
+  const endVideo = () => {
+    if (videoDone) return;
+    videoDone = true;
+    if (!loaded) el.classList.add('waiting'); // hold on the logo with a progress bar
+    reveal();
+  };
+  if (!el || !vid) return { progress() {}, ready() {}, fail() {} };
+  vid.addEventListener('ended', endVideo);
+  vid.addEventListener('error', endVideo);
+  const p = vid.play();
+  if (p && p.catch) p.catch(endVideo); // autoplay blocked: skip straight to the loading bar
+  const skip = (e) => { if (e) e.preventDefault(); vid.pause(); endVideo(); };
+  el.addEventListener('click', skip);
+  el.addEventListener('touchstart', skip, { passive: false });
+  window.addEventListener('keydown', function onKey() { if (!videoDone) skip(); if (videoDone) window.removeEventListener('keydown', onKey); });
+  return {
+    progress(f) { const b = $('introFill'); if (b) b.style.width = `${Math.round(f * 100)}%`; },
+    ready() { loaded = true; reveal(); },
+    fail() { gone = true; el.remove(); },
+  };
+})();
+
 async function boot() {
   const game = new Game($('app'));
   window.__game = game;
@@ -10,12 +42,15 @@ async function boot() {
     await game.init((p, text) => {
       $('loadFill').style.width = `${Math.round(p * 100)}%`;
       $('loadText').textContent = text;
+      intro.progress(p);
     });
   } catch (e) {
     console.error(e);
+    intro.fail();
     $('loadText').textContent = 'Failed to start: ' + (e && e.message ? e.message : e) + ' — WebGL2 is required.';
     return;
   }
+  intro.ready();
   $('loading').classList.add('hidden');
   $('menu').classList.remove('hidden');
 
