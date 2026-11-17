@@ -75,8 +75,6 @@ async function boot() {
     game.story.run(params.get('skip') || 'intro');
   };
   $('btnStart').onclick = start;
-  $('btnCredits').onclick = () => $('credits').classList.remove('hidden');
-  $('btnCreditsBack').onclick = () => $('credits').classList.add('hidden');
   $('btnSettings').onclick = () => { $('pause').classList.remove('hidden'); $('btnResume').textContent = 'Back'; };
   $('btnResume').onclick = () => {
     if (!game.started && !game.story.inCutscene && $('menu').classList.contains('hidden') === false) {

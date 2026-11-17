@@ -116,7 +116,7 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0.05em 0.4em; margin: 0 
 #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 8; transition: opacity 0.05s; }
 
 /* ---------- Menus ---------- */
-#loading, #menu, #pause, #credits, #endScreen, #deathScreen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 10; }
+#loading, #menu, #pause, #endScreen, #deathScreen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 10; }
 #loading { background: radial-gradient(ellipse at center, #1b1f19, #050605); }
 .load-inner { width: min(460px, 80vw); text-align: center; }
 .game-title { font: 700 42px 'Cinzel', serif; letter-spacing: 0.25em; color: #efe1bc; text-shadow: 0 4px 24px rgba(0, 0, 0, 0.7); }
@@ -205,10 +205,3 @@ kbd { display: inline-block; min-width: 1.6em; padding: 0.05em 0.4em; margin: 0 
 #intro .intro-skip { position: absolute; right: 22px; bottom: 18px; font: 500 12px 'Inter', system-ui, sans-serif; color: rgba(200, 205, 210, 0.35); letter-spacing: 0.04em; }
 #intro.waiting .intro-skip { display: none; }
 
-/* credits */
-#credits { background: rgba(0, 0, 0, 0.55); z-index: 11; }
-#credits .credits-body { display: flex; flex-direction: column; gap: 18px; max-width: min(520px, calc(100vw - 64px)); margin: 4px 0 8px; }
-#credits .credit-head { font: 600 11px 'Inter'; letter-spacing: 0.28em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
-#credits .credit-line { font: 400 15px/1.5 'Inter'; color: var(--text); }
-#credits a { color: #e8d9a8; text-decoration: underline; text-decoration-color: rgba(216, 183, 101, 0.5); text-underline-offset: 3px; }
-#credits a:hover { color: #fff; text-decoration-color: var(--accent); }
