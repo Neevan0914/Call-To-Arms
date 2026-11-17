@@ -20,7 +20,7 @@ import { Player } from '../chars/player.js';
 import { Soldier } from '../chars/soldier.js';
 import { nextFrame, clamp } from '../core/utils.js';
 import { loadAssets, loadTextures } from '../core/assets.js';
-import { Humanoid, UNIFORMS } from '../chars/humanoid.js';
+import { Humanoid, UNIFORMS , setAnimLibrary } from '../chars/humanoid.js';
 import { buildSoldierTemplate, materialFor } from '../chars/modelrig.js';
 import { setWeaponAssets } from '../chars/weapons.js';
 
@@ -110,6 +110,11 @@ export class Game {
     setWeaponAssets(this.assets);
     const embedded = window.__CTA_ASSETS || {};
     this._voiceLoad = (audio) => audio.loadVoices((path) => embedded[path] || path);
+    // motion-captured animation (walk, run, jump, death), retargeted to the game skeleton
+    try {
+      const r = await fetch(embedded['assets/anims/clips.json'] || 'assets/anims/clips.json');
+      if (r.ok) setAnimLibrary(await r.json());
+    } catch (e) { console.warn('[anims] unavailable, procedural only', e && e.message); }
 
     progress(0.28, 'Shaping the land…'); await nextFrame();
     this.terrain = new Terrain(7);

@@ -152,7 +152,7 @@ export class Soldier {
     const g = this.game, h = this.h;
     if (!this.alive) {
       this.deadT += dt;
-      if (this.h.a.deathT < 1) h.update(dt);
+      if (this.h.a.deathT < 1 || !this.h.deathSettled) h.update(dt); // mocap falls run longer
       return;
     }
     const playerDist = this.position.distanceTo(g.player.position);
@@ -317,6 +317,9 @@ export class Soldier {
     }
     // ---- anim params ----
     h.a.speed = Math.min(this.speedNow, 7);
+    if (this.speedNow > 0.3) h.a.moveFwd = ((this.position.x - this._px) * Math.sin(this.yaw) + (this.position.z - this._pz) * Math.cos(this.yaw)) / Math.max(1e-4, this.speedNow * dt);
+    else h.a.moveFwd = 1;
+    this._px = this.position.x; this._pz = this.position.z;
     h.a.aim = damp(h.a.aim, aimWant, 6, dt);
     h.a.crouch = damp(h.a.crouch, crouchWant || this.forceCrouch || 0, 6, dt);
     if (faceTarget && t) {

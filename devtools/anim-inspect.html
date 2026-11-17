@@ -1,0 +1,20 @@
+<!doctype html><html><body><script type="module">
+import * as THREE from 'three';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+const out = {};
+for (const n of ['Walking', 'Running', 'Jump', 'Dying_Backwards']) {
+  const fbx = await new FBXLoader().loadAsync(`/assets-src/anims/${n}.fbx`);
+  const bones = []; let skinned = 0;
+  fbx.traverse((o) => { if (o.isBone) bones.push(o.name); if (o.isSkinnedMesh) skinned++; });
+  const clip = fbx.animations[0];
+  const hips = fbx.getObjectByName('mixamorigHips') || fbx.getObjectByName('mixamorig:Hips');
+  const mixer = new THREE.AnimationMixer(fbx); mixer.clipAction(clip).play();
+  const ys = [], xs = [], zs = [];
+  const fps = 30, nF = Math.round(clip.duration * fps);
+  const p = new THREE.Vector3();
+  for (let f = 0; f <= nF; f++) { mixer.setTime(f / fps); fbx.updateMatrixWorld(true); hips.getWorldPosition(p); xs.push(+p.x.toFixed(1)); ys.push(+p.y.toFixed(1)); zs.push(+p.z.toFixed(1)); }
+  out[n] = { dur: +clip.duration.toFixed(3), tracks: clip.tracks.length, bones: bones.length, firstBones: bones.slice(0, 8), skinned, scale: fbx.scale.toArray(),
+    hipsX: [Math.min(...xs), Math.max(...xs)], hipsY: [Math.min(...ys), Math.max(...ys)], hipsZ: [Math.min(...zs), Math.max(...zs)], ySample: ys.filter((_, i) => i % 3 === 0) };
+}
+window.__done = out;
+</script></body></html>

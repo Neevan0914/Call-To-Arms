@@ -11,6 +11,49 @@ const BIND_ARM_L = new THREE.Vector3(0.204, -0.978, 0.04).normalize();
 const BIND_ARM_R = new THREE.Vector3(-0.204, -0.978, 0.04).normalize();
 export const BONE_NAMES = ['hips', 'spine', 'chest', 'neck', 'head', 'shL', 'elL', 'handL', 'shR', 'elR', 'handR', 'thL', 'knL', 'ftL', 'thR', 'knR', 'ftR'];
 
+// ---- motion-captured animation (Mixamo, retargeted offline: devtools/anim-convert.html) ----
+// clips: walk / run (in place, looping), jump, death. Each frame stores the local rotation of
+// every bone above plus a hip offset; Humanoid.update blends them over the procedural pose.
+let ANIMS = null;
+const IDX = (names) => names.map((n) => BONE_NAMES.indexOf(n));
+const BODY_BONES = IDX(['hips', 'spine', 'chest', 'thL', 'knL', 'ftL', 'thR', 'knR', 'ftR']);
+const HEAD_BONES = IDX(['neck', 'head']);
+const ARM_BONES = IDX(['shL', 'elL', 'handL', 'shR', 'elR', 'handR']);
+const ARM_HEAD_BONES = IDX(['neck', 'head', 'shL', 'elL', 'handL', 'shR', 'elR', 'handR']);
+export function setAnimLibrary(json) {
+  if (!json || !json.clips) return;
+  const lib = { fps: json.fps, clips: {} };
+  for (const [name, c] of Object.entries(json.clips)) {
+    const q = new Float32Array(c.q.length * c.q[0].length);
+    c.q.forEach((f, i) => q.set(f, i * f.length));
+    const hip = new Float32Array(c.hip.flat());
+    // airborne window (jump): frames where both feet are off the ground
+    let takeoff = -1, land = -1;
+    c.feet.forEach((y, i) => { if (y > 0.04) { if (takeoff < 0) takeoff = i; land = i; } });
+    lib.clips[name] = { dur: c.dur, frames: c.frames, loop: c.loop, stride: c.stride, q, hip, takeoff: takeoff / json.fps, land: (land + 1) / json.fps };
+  }
+  ANIMS = lib;
+}
+export function animLibrary() { return ANIMS; }
+const _qa = new THREE.Quaternion(), _qb = new THREE.Quaternion();
+// sample clip at time t into out (array of 17 quaternions) and hip (Vector3)
+function samplePose(clip, t, out, hip) {
+  const n = clip.frames, f = t * ANIMS.fps;
+  let i0 = Math.floor(f), k = f - i0;
+  let i1 = i0 + 1;
+  if (clip.loop) { i0 = ((i0 % n) + n) % n; i1 = (i0 + 1) % n; }
+  else { i0 = Math.max(0, Math.min(n - 1, i0)); i1 = Math.min(n - 1, i0 + 1); if (f >= n - 1) k = 0; }
+  const q = clip.q, B = BONE_NAMES.length;
+  for (let b = 0; b < B; b++) {
+    const o0 = (i0 * B + b) * 4, o1 = (i1 * B + b) * 4;
+    _qa.set(q[o0], q[o0 + 1], q[o0 + 2], q[o0 + 3]);
+    _qb.set(q[o1], q[o1 + 1], q[o1 + 2], q[o1 + 3]);
+    out[b].slerpQuaternions(_qa, _qb, k);
+  }
+  const h = clip.hip;
+  hip.set(h[i0 * 3] + (h[i1 * 3] - h[i0 * 3]) * k, h[i0 * 3 + 1] + (h[i1 * 3 + 1] - h[i0 * 3 + 1]) * k, h[i0 * 3 + 2] + (h[i1 * 3 + 2] - h[i0 * 3 + 2]) * k);
+}
+
 export const UNIFORMS = {
   velmora: {
     tunic: 0x6c6747, trousers: 0x5f5b40, puttee: 0x544f37, boots: 0x2e2116, belt: 0x5a3b22,
@@ -109,6 +152,9 @@ export class Humanoid {
     this._v1 = new THREE.Vector3(); this._v2 = new THREE.Vector3(); this._v3 = new THREE.Vector3(); this._v4 = new THREE.Vector3();
     this._gR = new THREE.Vector3(); this._gL = new THREE.Vector3();
     this._lookYaw = 0; this._lookPitch = 0;
+    this._pA = BONE_NAMES.map(() => new THREE.Quaternion()); this._pB = BONE_NAMES.map(() => new THREE.Quaternion());
+    this._hA = new THREE.Vector3(); this._hB = new THREE.Vector3();
+    this._locoU = 0; this._deathAnimT = 0; this.deathSettled = false;
     this._hit = [];
     for (let i = 0; i < 8; i++) this._hit.push({ c: new THREE.Vector3(), r: 0.1, part: 'body' });
   }
@@ -390,7 +436,15 @@ export class Humanoid {
     this.t += dt;
     const dead = a.dead;
     const spd = dead ? 0 : a.speed;
-    a.phase += dt * (spd > 0.05 ? 3.4 + spd * 1.15 : 0);
+    const AN = ANIMS && ANIMS.clips.walk && ANIMS.clips.run ? ANIMS : null;
+    const runW = smoothstep(2.4, 3.6, spd);
+    if (AN && spd > 0.05) {
+      // one stride cycle per 2π, matched to the clips' stride so feet don't skate
+      const stride = lerp(AN.clips.walk.stride, AN.clips.run.stride, runW);
+      const dir = (a.moveFwd ?? 1) < -0.3 ? -1 : 1;
+      this._locoU = (this._locoU + dir * dt * spd / Math.max(0.5, stride) + 1) % 1;
+      a.phase += dt * Math.PI * 2 * spd / Math.max(0.5, stride);
+    } else a.phase += dt * (spd > 0.05 ? 3.4 + spd * 1.15 : 0);
     this.walk = damp(this.walk, clamp(spd / 1.2, 0, 1), 8, dt);
     const amp = clamp(spd / 5.5, 0, 1);
     const wk = this.walk;
@@ -458,7 +512,12 @@ export class Humanoid {
     }
 
     // ---- death fall ----
-    if (dead) {
+    const mocapDeath = dead && ANIMS && ANIMS.clips.death && a.deathDir < 0 && !(a.kneel > 0.3) && !(a.sit > 0.3);
+    if (mocapDeath) {
+      a.deathT = 1;
+      this.body.rotation.x = 0; this.body.position.set(0, 0, 0);
+      poseArms = { shX: 0, shZ: 0.2, elX: -0.2 };
+    } else if (dead) {
       a.deathT = Math.min(1, a.deathT + dt / 0.9);
       const e = a.deathT * a.deathT;
       this.body.rotation.x = a.deathDir * (Math.PI / 2) * e;
@@ -484,6 +543,9 @@ export class Humanoid {
     this.thL.rotation.set(thL, 0, -0.03); this.thR.rotation.set(thR, 0, 0.03);
     this.knL.rotation.set(knL, 0, 0); this.knR.rotation.set(knR, 0, 0);
     this.ftL.rotation.set(footL, 0, 0); this.ftR.rotation.set(footR, 0, 0);
+    this.hips.position.x = 0; this.hips.position.z = 0;
+    // ---- motion capture over the procedural pose ----
+    const animArms = this._animBody(dt, a, spd, runW, cr, tuck, mocapDeath);
 
     // ---- head look ----
     let ly = 0, lp = 0;
@@ -509,6 +571,7 @@ export class Humanoid {
       this._freeArm(this.shL, this.elL, 1, poseArms.shX, poseArms.shZ, -poseArms.elX);
       this._freeArm(this.shR, this.elR, -1, poseArms.shX, poseArms.shZ, -poseArms.elX);
       if (w === 'rifle' || w === 'lmg') this._setMount(-0.15, -0.3, 0.2, 0.9, 0.5, 0);
+      if (mocapDeath) this._animApply(this._pA, 1, ARM_HEAD_BONES);
       return;
     }
     this.mount.visible = true;
@@ -594,6 +657,7 @@ export class Humanoid {
       this._freeArm(this.shL, this.elL, 1, -swingArm * 0.6 - 0.25, 0.25, 0.9);
     } else {
       // unarmed
+      this.handL.quaternion.identity(); this.handR.quaternion.identity();
       let lS = -swingArm, rS = swingArm;
       let lOut = 0, rOut = 0, lBend = 0.25, rBend = 0.25;
       if (a.offer > 0) { rS = lerp(rS, -1.1, a.offer); rBend = lerp(rBend, 0.4, a.offer); lS = lerp(lS, -1.0, a.offer); lBend = lerp(lBend, 0.5, a.offer); }
@@ -615,7 +679,79 @@ export class Humanoid {
         // officer: hands behind back
         this._freeArm(this.shL, this.elL, 1, 0.45, -0.05, 1.3);
         this._freeArm(this.shR, this.elR, -1, 0.45, -0.05, 1.3);
+      } else if (animArms > 0 && a.talk <= 0 && a.wave <= 0 && a.handsUp <= 0 && a.offer <= 0) {
+        this._animApply(this._pA, animArms, ARM_BONES); // natural arm swing from the walk/run
       }
+    }
+  }
+
+  // Blend mocap onto hips / spine / legs (and keep the pose for arms). Returns the weight the
+  // unarmed arm swing may use.
+  _animBody(dt, a, spd, runW, cr, tuck, mocapDeath) {
+    if (!ANIMS) return 0;
+    const C = ANIMS.clips;
+    if (mocapDeath) {
+      const d = C.death;
+      this._deathAnimT += dt;
+      const t = Math.min(d.dur, 0.35 + this._deathAnimT);
+      if (t >= d.dur) this.deathSettled = true;
+      samplePose(d, t, this._pA, this._hA);
+      samplePose(d, 0.35, this._pB, this._hB);
+      this.hips.position.set(this._hA.x - this._hB.x, HIP_Y + this._hA.y, this._hA.z - this._hB.z);
+      this._animApply(this._pA, 1, BODY_BONES);
+      this._animApply(this._pA, 1, HEAD_BONES);
+      return 0;
+    }
+    this._deathAnimT = 0; this.deathSettled = false;
+    if (a.dead) return 0;
+    const busy = (a.flip ? 1 : 0) || a.getup >= 0 || a.sit > 0.3 || a.kneel > 0.3;
+    // airborne / landing (player jumps)
+    let air = 0;
+    if (C.jump && !busy && !tuck) {
+      const j = C.jump;
+      if (a.airT != null && a.airT >= 0) {
+        this._landT = -1;
+        air = 1;
+        samplePose(j, j.takeoff + (j.land - j.takeoff) * a.airT, this._pB, this._hB);
+      } else if (this._landT != null && this._landT >= 0) {
+        this._landT += dt / 0.45;
+        if (this._landT >= 1) this._landT = -1;
+        else { air = 1 - this._landT; samplePose(j, j.land + this._landT * 0.45, this._pB, this._hB); }
+      }
+      if (this._wasAir && !(a.airT >= 0)) this._landT = 0;
+      this._wasAir = a.airT != null && a.airT >= 0;
+    }
+    // locomotion: walk <-> run by speed; fades out when crouched, strafing or busy
+    const fwd = Math.abs(a.moveFwd ?? 1);
+    let wLoco = busy ? 0 : smoothstep(0.25, 0.9, spd) * (1 - cr) * (1 - tuck) * smoothstep(0.3, 0.65, fwd);
+    if (wLoco > 0.001 || air > 0.001) {
+      if (wLoco > 0.001) {
+        const W = C.walk, R = C.run;
+        samplePose(W, this._locoU * W.dur, this._pA, this._hA);
+        if (runW > 0.001) {
+          const q = this._qTmp || (this._qTmp = BONE_NAMES.map(() => new THREE.Quaternion())), h = this._hTmp || (this._hTmp = new THREE.Vector3());
+          samplePose(R, this._locoU * R.dur, q, h);
+          for (let i = 0; i < q.length; i++) this._pA[i].slerp(q[i], runW);
+          this._hA.lerp(h, runW);
+        }
+      }
+      if (air > 0.001) {
+        // the jump wins over the run cycle
+        for (let i = 0; i < this._pA.length; i++) wLoco > 0.001 ? this._pA[i].slerp(this._pB[i], air) : this._pA[i].copy(this._pB[i]);
+        wLoco > 0.001 ? this._hA.lerp(this._hB, air) : this._hA.copy(this._hB);
+      }
+      const w = Math.max(wLoco, air);
+      this._animApply(this._pA, w, BODY_BONES);
+      this.hips.position.y = lerp(this.hips.position.y, HIP_Y + this._hA.y, w);
+      return w;
+    }
+    return 0;
+  }
+
+  _animApply(pose, w, bones) {
+    for (const i of bones) {
+      const b = this[BONE_NAMES[i]];
+      if (w >= 0.999) b.quaternion.copy(pose[i]); else b.quaternion.slerp(pose[i], w);
     }
   }
 

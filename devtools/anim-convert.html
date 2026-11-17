@@ -1,0 +1,114 @@
+<!doctype html><html><body><script type="module">
+// Retargets Mixamo FBX animations (assets-src/anims/*.fbx) onto the game's procedural skeleton
+// (src/chars/humanoid.js) and returns per-frame local quaternions for its 17 bones, plus a hip offset.
+//  - torso, legs, feet, head: the Mixamo bone's world rotation relative to its bind pose (both
+//    rigs stand straight with limbs down there, so the delta carries over directly)
+//  - arms (Mixamo binds in a T-pose, the game in an A-pose): matched by limb direction, with the
+//    elbow's hinge oriented from the arm's bend so the game's forearm bends as it should.
+import * as THREE from 'three';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { HIP_Y, THIGH, SHIN, UPPER, FORE, BONE_NAMES } from '/src/chars/humanoid.js';
+
+const CLIPS = [
+  { name: 'walk', file: 'Walking', inPlace: true, loop: true },
+  { name: 'run', file: 'Running', inPlace: true, loop: true },
+  { name: 'jump', file: 'Jump', inPlace: true, loop: false },
+  { name: 'death', file: 'Dying_Backwards', inPlace: false, loop: false, trimEnd: 0.1 },
+];
+const FPS = 30;
+const MAP = { hips: 'Hips', spine: 'Spine1', chest: 'Spine2', neck: 'Neck', head: 'Head', thL: 'LeftUpLeg', knL: 'LeftLeg', ftL: 'LeftFoot', thR: 'RightUpLeg', knR: 'RightLeg', ftR: 'RightFoot' };
+
+// game rig (same offsets as Humanoid)
+function buildRig() {
+  const G = (p, x = 0, y = 0, z = 0) => { const g = new THREE.Object3D(); g.position.set(x, y, z); if (p) p.add(g); return g; };
+  const r = {};
+  r.root = G(null);
+  r.hips = G(r.root, 0, HIP_Y, 0); r.spine = G(r.hips, 0, 0.12, 0); r.chest = G(r.spine, 0, 0.235, 0); r.neck = G(r.chest, 0, 0.205, 0); r.head = G(r.neck, 0, 0.16, 0);
+  r.shL = G(r.chest, 0.185, 0.125, -0.01); r.elL = G(r.shL, 0, -UPPER, 0); r.handL = G(r.elL, 0, -FORE, 0);
+  r.shR = G(r.chest, -0.185, 0.125, -0.01); r.elR = G(r.shR, 0, -UPPER, 0); r.handR = G(r.elR, 0, -FORE, 0);
+  r.thL = G(r.hips, 0.095, -0.05, 0); r.knL = G(r.thL, 0, -THIGH, 0); r.ftL = G(r.knL, 0, -SHIN, 0);
+  r.thR = G(r.hips, -0.095, -0.05, 0); r.knR = G(r.thR, 0, -THIGH, 0); r.ftR = G(r.knR, 0, -SHIN, 0);
+  return r;
+}
+const PARENT = { hips: 'root', spine: 'hips', chest: 'spine', neck: 'chest', head: 'neck', shL: 'chest', elL: 'shL', handL: 'elL', shR: 'chest', elR: 'shR', handR: 'elR', thL: 'hips', knL: 'thL', ftL: 'knL', thR: 'hips', knR: 'thR', ftR: 'knR' };
+
+// world rotation from a primary Y axis and a hint for Z (or X)
+const _m = new THREE.Matrix4();
+function frameYZ(Y, Zh) {
+  const y = Y.clone().normalize();
+  const z = Zh.clone().addScaledVector(y, -Zh.dot(y)).normalize();
+  const x = new THREE.Vector3().crossVectors(y, z);
+  return new THREE.Quaternion().setFromRotationMatrix(_m.makeBasis(x, y, z));
+}
+function frameYX(Y, Xh) {
+  const y = Y.clone().normalize();
+  const x = Xh.clone().addScaledVector(y, -Xh.dot(y)).normalize();
+  const z = new THREE.Vector3().crossVectors(x, y);
+  return new THREE.Quaternion().setFromRotationMatrix(_m.makeBasis(x, y, z));
+}
+
+const out = { fps: FPS, bones: BONE_NAMES, clips: {} };
+for (const C of CLIPS) {
+  const fbx = await new FBXLoader().loadAsync(`/assets-src/anims/${C.file}.fbx`);
+  const B = {};
+  fbx.traverse((o) => { if (o.isBone) B[o.name.replace(/^mixamorig:?/, '')] = o; });
+  // bind (rest) world rotations / positions, before any animation is applied
+  fbx.updateMatrixWorld(true);
+  const restQ = {}, restP = {};
+  for (const [k, b] of Object.entries(B)) { restQ[k] = b.getWorldQuaternion(new THREE.Quaternion()); restP[k] = b.getWorldPosition(new THREE.Vector3()); }
+  const scale = HIP_Y / restP.Hips.y;
+  const clip = fbx.animations[0];
+  const mixer = new THREE.AnimationMixer(fbx);
+  mixer.clipAction(clip).play();
+  const dur = clip.duration - (C.trimEnd || 0);
+  const nF = Math.max(2, Math.round(dur * FPS) + (C.loop ? 0 : 1));
+  const rig = buildRig();
+  const q = [], hp = [], feet = [];
+  const P = (k) => B[k].getWorldPosition(new THREE.Vector3());
+  let hip0 = null;
+  for (let f = 0; f < nF; f++) {
+    mixer.setTime(Math.min(dur, f / FPS));
+    fbx.updateMatrixWorld(true);
+    const world = {};
+    // torso / legs / feet / head: world delta from bind
+    for (const [ours, mx] of Object.entries(MAP)) {
+      const qw = B[mx].getWorldQuaternion(new THREE.Quaternion());
+      world[ours] = qw.multiply(restQ[mx].clone().invert());
+    }
+    // arms: by direction, hinge from the bend
+    const chestFwd = new THREE.Vector3(0, 0, 1).applyQuaternion(world.chest);
+    for (const s of ['L', 'R']) {
+      const side = s === 'L' ? 'Left' : 'Right';
+      const a = P(`${side}Arm`), e = P(`${side}ForeArm`), h = P(`${side}Hand`), m = P(`${side}HandMiddle1`);
+      const up = new THREE.Vector3().subVectors(e, a).normalize();
+      const fo = new THREE.Vector3().subVectors(h, e).normalize();
+      let bend = fo.clone().addScaledVector(up, -fo.dot(up));
+      if (bend.length() < 0.08) bend = chestFwd.clone(); // nearly straight: elbow faces forward
+      world['sh' + s] = frameYZ(up.clone().negate(), bend);
+      const hingeX = new THREE.Vector3(1, 0, 0).applyQuaternion(world['sh' + s]);
+      world['el' + s] = frameYX(fo.clone().negate(), hingeX);
+      const hd = new THREE.Vector3().subVectors(m, h).normalize();
+      world['hand' + s] = frameYX(hd.negate(), new THREE.Vector3(1, 0, 0).applyQuaternion(world['el' + s]));
+    }
+    // world -> local, root to tips
+    const frameQ = [];
+    for (const name of BONE_NAMES) {
+      const parentW = PARENT[name] === 'root' ? new THREE.Quaternion() : world[PARENT[name]];
+      const local = parentW.clone().invert().multiply(world[name]);
+      frameQ.push(+local.x.toFixed(4), +local.y.toFixed(4), +local.z.toFixed(4), +local.w.toFixed(4));
+    }
+    q.push(frameQ);
+    // hip offset (metres, game scale); locomotion keeps only the bob
+    const hipP = P('Hips');
+    if (!hip0) hip0 = hipP.clone();
+    const dx = C.inPlace ? 0 : (hipP.x - hip0.x) * scale, dz = C.inPlace ? 0 : (hipP.z - hip0.z) * scale;
+    hp.push([+dx.toFixed(4), +((hipP.y - restP.Hips.y) * scale).toFixed(4), +dz.toFixed(4)]);
+    feet.push(+(Math.min(P('LeftToeBase').y, P('RightToeBase').y, P('LeftFoot').y, P('RightFoot').y) * scale).toFixed(3));
+  }
+  // stride length per cycle (for matching playback speed to movement)
+  let stride = 0;
+  if (C.inPlace) { mixer.setTime(0); fbx.updateMatrixWorld(true); const a = P('Hips'); mixer.setTime(dur - 1e-3); fbx.updateMatrixWorld(true); const b = P('Hips'); stride = +(Math.hypot(b.x - a.x, b.z - a.z) * scale).toFixed(3); }
+  out.clips[C.name] = { dur: +dur.toFixed(3), frames: nF, loop: C.loop, stride, q, hip: hp, feet };
+}
+window.__done = out;
+</script></body></html>

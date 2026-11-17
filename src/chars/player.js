@@ -239,6 +239,14 @@ export class Player {
     h.root.rotation.y = this.yaw + this.spinYaw;
 
     h.a.speed = sp;
+    // for the mocap layer: how much of the movement is along the facing (strafing fades it out)
+    if (sp > 0.3) h.a.moveFwd = (this.vel.x * Math.sin(this.yaw) + this.vel.z * Math.cos(this.yaw)) / sp;
+    else h.a.moveFwd = 1;
+    // airborne progress for the jump clip (not during sabre/axe acrobatics)
+    if (!this.onGround && !this.sword.active) {
+      if (!this._air) { this._air = true; this._vy0 = Math.max(this.vy, 2.5); }
+      h.a.airT = Math.min(1, Math.max(0, (this._vy0 - this.vy) / (2 * this._vy0)));
+    } else { this._air = false; h.a.airT = -1; }
     const wantAim = this.aiming ? 1 : isGun && this.sinceShot < 0.7 ? 0.85 : 0;
     h.a.aim = damp(h.a.aim, wantAim, 14, dt);
     h.a.pitch = damp(h.a.pitch, wantAim > 0 ? rig.pitch + 0.03 : 0, 12, dt);
