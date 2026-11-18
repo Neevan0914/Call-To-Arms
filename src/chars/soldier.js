@@ -94,6 +94,7 @@ export class Soldier {
       g.audio.impact('flesh', point);
     }
     this.h.a.hurt = 1;
+    if (!(this.h.a.hitT > 0 && this.h.a.hitT < 0.35)) this.h.a.hitT = 0; // flinch
     this.alerted = true;
     if (from && from.alive && from.faction !== this.faction) this.target = from;
     if (melee) { this.stunT = 0.55; this.attackT = -1; this.h.a.thrust = -1; }
@@ -226,12 +227,14 @@ export class Soldier {
               g.audio.slash(t.position);
             }
           }
-          if (this.attackT > 0.75) { this.attackT = -1; this.attackCd = rand(0.7, 1.3); }
+          if (this.weaponType === 'sword') this.h.a.swing = Math.min(0.999, this.attackT / 0.75);
+          if (this.attackT > 0.75) { this.attackT = -1; this.attackCd = rand(0.7, 1.3); this.h.a.swing = -1; }
         } else {
           this.attackCd -= dt;
           if (td > 1.7) { moveTo = t.position; wantSpeed = td > 6 ? 5.0 : 3.0; aimWant = 0; }
           else if (this.attackCd <= 0) {
-            this.attackT = 0; this.attackHit = false; this.h.a.thrust = 0;
+            this.attackT = 0; this.attackHit = false;
+            if (this.weaponType === 'sword') { this.h.a.swing = 0; this.h.a.swingVariant = Math.random() < 0.5 ? 1 : 0; } else this.h.a.thrust = 0;
             g.audio.grunt(this.position, 0.9);
           }
         }

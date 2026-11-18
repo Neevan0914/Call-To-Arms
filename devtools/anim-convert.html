@@ -11,9 +11,13 @@ import { HIP_Y, THIGH, SHIN, UPPER, FORE, BONE_NAMES } from '/src/chars/humanoid
 
 const CLIPS = [
   { name: 'walk', file: 'Walking', inPlace: true, loop: true },
-  { name: 'run', file: 'Running', inPlace: true, loop: true },
+  { name: 'run', file: 'Fast_Run', inPlace: true, loop: true, trimEnd: 1 / 30 },
   { name: 'jump', file: 'Jump', inPlace: true, loop: false },
   { name: 'death', file: 'Dying_Backwards', inPlace: false, loop: false, trimEnd: 0.1 },
+  { name: 'deathFwd', file: 'Death_Forward', inPlace: false, loop: false, trimEnd: 1 / 30 },
+  { name: 'hit', file: 'Hit_Reaction', inPlace: true, loop: false, trimEnd: 1 / 30 },
+  { name: 'slash1', file: 'Sword', inPlace: true, loop: false, trimEnd: 1 / 30, strike: true },
+  { name: 'slash2', file: 'Great_Sword_Slash', inPlace: true, loop: false, trimEnd: 1 / 30, strike: true },
 ];
 const FPS = 30;
 const MAP = { hips: 'Hips', spine: 'Spine1', chest: 'Spine2', neck: 'Neck', head: 'Head', thL: 'LeftUpLeg', knL: 'LeftLeg', ftL: 'LeftFoot', thR: 'RightUpLeg', knR: 'RightLeg', ftR: 'RightFoot' };
@@ -63,7 +67,8 @@ for (const C of CLIPS) {
   const dur = clip.duration - (C.trimEnd || 0);
   const nF = Math.max(2, Math.round(dur * FPS) + (C.loop ? 0 : 1));
   const rig = buildRig();
-  const q = [], hp = [], feet = [];
+  const q = [], hp = [], feet = [], handSp = [], footRel = [];
+  let prevHand = null;
   const P = (k) => B[k].getWorldPosition(new THREE.Vector3());
   let hip0 = null;
   for (let f = 0; f < nF; f++) {
@@ -104,11 +109,32 @@ for (const C of CLIPS) {
     const dx = C.inPlace ? 0 : (hipP.x - hip0.x) * scale, dz = C.inPlace ? 0 : (hipP.z - hip0.z) * scale;
     hp.push([+dx.toFixed(4), +((hipP.y - restP.Hips.y) * scale).toFixed(4), +dz.toFixed(4)]);
     feet.push(+(Math.min(P('LeftToeBase').y, P('RightToeBase').y, P('LeftFoot').y, P('RightFoot').y) * scale).toFixed(3));
+    const hand = P('RightHand');
+    handSp.push(prevHand ? hand.distanceTo(prevHand) * scale * FPS : 0);
+    prevHand = hand;
+    footRel.push((P('LeftFoot').z - hipP.z) * scale);
+  }
+  // strikes: where the swing starts, lands (fastest hand) and ends
+  let strike = null;
+  if (C.strike) {
+    let peak = 0;
+    handSp.forEach((v, i) => { if (v > handSp[peak]) peak = i; });
+    const thr = handSp[peak] * 0.18;
+    let st = 1; while (st < peak && handSp[st] < thr) st++;
+    let en = nF - 1; while (en > peak && handSp[en] < thr) en--;
+    st = Math.max(0, st - 2); en = Math.min(nF - 1, en + 3);
+    strike = { start: +(st / FPS).toFixed(3), impact: +(peak / FPS).toFixed(3), end: +(en / FPS).toFixed(3) };
   }
   // stride length per cycle (for matching playback speed to movement)
   let stride = 0;
-  if (C.inPlace) { mixer.setTime(0); fbx.updateMatrixWorld(true); const a = P('Hips'); mixer.setTime(dur - 1e-3); fbx.updateMatrixWorld(true); const b = P('Hips'); stride = +(Math.hypot(b.x - a.x, b.z - a.z) * scale).toFixed(3); }
-  out.clips[C.name] = { dur: +dur.toFixed(3), frames: nF, loop: C.loop, stride, q, hip: hp, feet };
+  if (C.inPlace && C.loop) {
+    mixer.setTime(0); fbx.updateMatrixWorld(true); const a = P('Hips'); mixer.setTime(dur - 1e-3); fbx.updateMatrixWorld(true); const b = P('Hips');
+    stride = Math.hypot(b.x - a.x, b.z - a.z) * scale;
+    // truly in-place clips: the foot's swing relative to the hips gives the step length
+    if (stride < 0.4) stride = 2 * (Math.max(...footRel) - Math.min(...footRel));
+    stride = +stride.toFixed(3);
+  }
+  out.clips[C.name] = { dur: +dur.toFixed(3), frames: nF, loop: C.loop, stride, strike, q, hip: hp, feet };
 }
 window.__done = out;
 </script></body></html>

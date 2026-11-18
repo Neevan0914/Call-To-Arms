@@ -123,6 +123,7 @@ export class Player {
     this.hp -= amount * g.settings.damageScale;
     this.lastHurt = g.time;
     this.h.a.hurt = 1;
+    if (!(this.h.a.hitT > 0 && this.h.a.hitT < 0.35)) this.h.a.hitT = 0; // flinch
     g.hud.damage(from ? from.position : null);
     g.audio.grunt(null, 1.1);
     g.rig.addTrauma(0.25);

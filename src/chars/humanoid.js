@@ -18,6 +18,8 @@ let ANIMS = null;
 const IDX = (names) => names.map((n) => BONE_NAMES.indexOf(n));
 const BODY_BONES = IDX(['hips', 'spine', 'chest', 'thL', 'knL', 'ftL', 'thR', 'knR', 'ftR']);
 const HEAD_BONES = IDX(['neck', 'head']);
+const TORSO_BONES = IDX(['hips', 'spine', 'chest']);
+const LEG_BONES = IDX(['thL', 'knL', 'ftL', 'thR', 'knR', 'ftR']);
 const ARM_BONES = IDX(['shL', 'elL', 'handL', 'shR', 'elR', 'handR']);
 const ARM_HEAD_BONES = IDX(['neck', 'head', 'shL', 'elL', 'handL', 'shR', 'elR', 'handR']);
 export function setAnimLibrary(json) {
@@ -30,7 +32,7 @@ export function setAnimLibrary(json) {
     // airborne window (jump): frames where both feet are off the ground
     let takeoff = -1, land = -1;
     c.feet.forEach((y, i) => { if (y > 0.04) { if (takeoff < 0) takeoff = i; land = i; } });
-    lib.clips[name] = { dur: c.dur, frames: c.frames, loop: c.loop, stride: c.stride, q, hip, takeoff: takeoff / json.fps, land: (land + 1) / json.fps };
+    lib.clips[name] = { dur: c.dur, frames: c.frames, loop: c.loop, stride: c.stride, strike: c.strike || null, q, hip, takeoff: takeoff / json.fps, land: (land + 1) / json.fps };
   }
   ANIMS = lib;
 }
@@ -154,7 +156,7 @@ export class Humanoid {
     this._lookYaw = 0; this._lookPitch = 0;
     this._pA = BONE_NAMES.map(() => new THREE.Quaternion()); this._pB = BONE_NAMES.map(() => new THREE.Quaternion());
     this._hA = new THREE.Vector3(); this._hB = new THREE.Vector3();
-    this._locoU = 0; this._deathAnimT = 0; this.deathSettled = false;
+    this._locoU = 0; this._deathAnimT = 0; this.deathSettled = false; this._hitW = 0;
     this._hit = [];
     for (let i = 0; i < 8; i++) this._hit.push({ c: new THREE.Vector3(), r: 0.1, part: 'body' });
   }
@@ -512,7 +514,7 @@ export class Humanoid {
     }
 
     // ---- death fall ----
-    const mocapDeath = dead && ANIMS && ANIMS.clips.death && a.deathDir < 0 && !(a.kneel > 0.3) && !(a.sit > 0.3);
+    const mocapDeath = dead && ANIMS && (a.deathDir < 0 ? ANIMS.clips.death : ANIMS.clips.deathFwd) && !(a.kneel > 0.3) && !(a.sit > 0.3);
     if (mocapDeath) {
       a.deathT = 1;
       this.body.rotation.x = 0; this.body.position.set(0, 0, 0);
@@ -563,6 +565,7 @@ export class Humanoid {
     this.neck.rotation.set(-this._lookPitch * 0.5 + talkNod + (dead ? 0 : -pitch * 0.1), this._lookYaw * 0.55, 0);
     this.head.rotation.set(-this._lookPitch * 0.5, this._lookYaw * 0.45, a.talk > 0 ? Math.sin(this.t * 2.3) * 0.04 : 0);
     if (a.slump) { this.neck.rotation.x += 0.45 * a.slump; this.head.rotation.x += 0.3 * a.slump; this.head.rotation.z += 0.12 * a.slump; }
+    if (this._hitW > 0 && this._pH) this._animApply(this._pH, this._hitW * 0.8, HEAD_BONES);
 
     // ---- arms & weapon ----
     const w = a.weapon;
@@ -622,9 +625,10 @@ export class Humanoid {
       ];
       let p = K[0].p, r = K[0].r;
       let twist = 0;
-      if (a.swordOverride) {
+      const mswing = this._mocapSwing(a);
+      if (a.swordOverride && !mswing) {
         p = a.swordOverride.p; r = a.swordOverride.r; twist = a.swordOverride.tw || 0;
-      } else if (a.swing >= 0) {
+      } else if (a.swing >= 0 && !mswing) {
         const v = a.swingVariant;
         const keys = v === 0 ? [
           { t: 0, p: [-0.21, -0.32, 0.25], r: [-0.75, 0.15, 0.0], tw: 0 },
@@ -655,6 +659,7 @@ export class Humanoid {
       this._palm(this._gR, SH_R);
       this._ik(this.shR, this.elR, SH_R, this._gR, this._v3.set(-0.5, -0.5, -0.1).add(SH_R));
       this._freeArm(this.shL, this.elL, 1, -swingArm * 0.6 - 0.25, 0.25, 0.9);
+      if (mswing) this._applyMocapSwing(mswing);
     } else {
       // unarmed
       this.handL.quaternion.identity(); this.handR.quaternion.identity();
@@ -691,12 +696,12 @@ export class Humanoid {
     if (!ANIMS) return 0;
     const C = ANIMS.clips;
     if (mocapDeath) {
-      const d = C.death;
+      const d = a.deathDir < 0 ? C.death : C.deathFwd, t0 = a.deathDir < 0 ? 0.35 : 0.1;
       this._deathAnimT += dt;
-      const t = Math.min(d.dur, 0.35 + this._deathAnimT);
+      const t = Math.min(d.dur, t0 + this._deathAnimT);
       if (t >= d.dur) this.deathSettled = true;
       samplePose(d, t, this._pA, this._hA);
-      samplePose(d, 0.35, this._pB, this._hB);
+      samplePose(d, t0, this._pB, this._hB);
       this.hips.position.set(this._hA.x - this._hB.x, HIP_Y + this._hA.y, this._hA.z - this._hB.z);
       this._animApply(this._pA, 1, BODY_BONES);
       this._animApply(this._pA, 1, HEAD_BONES);
@@ -743,9 +748,65 @@ export class Humanoid {
       const w = Math.max(wLoco, air);
       this._animApply(this._pA, w, BODY_BONES);
       this.hips.position.y = lerp(this.hips.position.y, HIP_Y + this._hA.y, w);
+      this._hitLayer(dt, a, w);
       return w;
     }
+    this._hitLayer(dt, a, 0);
     return 0;
+  }
+
+  // flinch when hit: the torso (and the legs when standing) follow the hit reaction
+  _hitLayer(dt, a, wLoco) {
+    this._hitW = 0;
+    const H = ANIMS.clips.hit;
+    if (!H || a.hitT == null || a.hitT < 0) return;
+    a.hitT += dt / H.dur;
+    if (a.hitT >= 1) { a.hitT = -1; return; }
+    const w = Math.sin(Math.PI * Math.min(1, a.hitT * 1.15)) * 0.85;
+    const pH = this._pH || (this._pH = BONE_NAMES.map(() => new THREE.Quaternion()));
+    samplePose(H, a.hitT * H.dur, pH, this._hB);
+    this._animApply(pH, w, TORSO_BONES);
+    this._animApply(pH, w * (1 - wLoco) * 0.7, LEG_BONES);
+    this._hitW = w;
+  }
+
+  // a sword/axe swing from motion capture: { clip, u } (u = 0..1 over the swing), or an NPC's
+  // procedural a.swing mapped onto one of the slash clips
+  _mocapSwing(a) {
+    if (!ANIMS || !ANIMS.clips.slash1 || !ANIMS.clips.slash2 || !ANIMS.clips.slash1.strike || a.dead) return null;
+    if (a.swingMocap) return a.swingMocap;
+    if (a.swing >= 0) {
+      const clip = a.swingVariant ? 'slash2' : 'slash1';
+      const S = ANIMS.clips[clip].strike, imp = (S.impact - S.start) / (S.end - S.start);
+      const x = a.swing;
+      const u = x < 0.3 ? (x / 0.3) * (imp - 0.08) : x < 0.6 ? imp - 0.08 + ((x - 0.3) / 0.3) * 0.18 : imp + 0.1 + ((x - 0.6) / 0.4) * (0.9 - imp);
+      return (this._npcSwing = this._npcSwing || {}, this._npcSwing.clip = clip, this._npcSwing.u = Math.min(1, u), this._npcSwing);
+    }
+    return null;
+  }
+
+  _applyMocapSwing(ms) {
+    const c = ANIMS.clips[ms.clip], S = c.strike;
+    const u = Math.max(0, Math.min(1, ms.u));
+    const pS = this._pS || (this._pS = BONE_NAMES.map(() => new THREE.Quaternion())), hS = this._hS || (this._hS = new THREE.Vector3());
+    samplePose(c, S.start + u * (S.end - S.start), pS, hS);
+    const env = smoothstep(0, 0.1, u) * (1 - smoothstep(0.88, 1, u));
+    // the blade keeps the grip the guard pose gave it, relative to the right hand
+    this.mount.updateMatrix();
+    this.root.updateMatrixWorld(true);
+    const G = this._mG || (this._mG = new THREE.Matrix4());
+    G.copy(this.handR.matrixWorld).invert().multiply(this.mount.matrixWorld);
+    this._animApply(pS, env * 0.9, BODY_BONES);
+    this._animApply(pS, env, ARM_BONES);
+    this.hips.position.y = lerp(this.hips.position.y, HIP_Y + hS.y, env * 0.9);
+    this.root.updateMatrixWorld(true);
+    const Mw = this._mW || (this._mW = new THREE.Matrix4());
+    Mw.copy(this.handR.matrixWorld).multiply(G);
+    const L = this._mL || (this._mL = new THREE.Matrix4());
+    L.copy(this.chest.matrixWorld).invert().multiply(Mw);
+    L.decompose(this.mount.position, this.mount.quaternion, this._mS || (this._mS = new THREE.Vector3()));
+    this.mount.scale.set(1, 1, 1);
+    this.mount.updateMatrix();
   }
 
   _animApply(pose, w, bones) {

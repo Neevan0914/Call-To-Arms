@@ -114,6 +114,25 @@ export const MOVES = {
 
 const COMBO = ['slash', 'backhand', 'spin', 'flip'];
 
+// With motion capture loaded, the first two combo hits become the mocap slashes: the body and
+// both arms follow the clip, the blade rides in the right hand, and the hit lands on the frame
+// where the hand moves fastest.
+export function useMocapSlashes(lib) {
+  if (!lib || !lib.clips.slash1 || !lib.clips.slash2) return;
+  const make = (clip, speed, lunge) => {
+    const S = lib.clips[clip].strike;
+    const imp = (S.impact - S.start) / (S.end - S.start);
+    return {
+      mocap: clip, dur: (S.end - S.start) / speed, sound: [Math.max(0.05, imp - 0.18)],
+      hits: [{ at: imp, range: 2.8, arc: 140, dmg: 55, knock: 2.8 }],
+      lunge: [[Math.max(0, imp - 0.22), imp + 0.05, lunge]],
+      pose() { return { ...GUARD }; },
+    };
+  };
+  MOVES.slash = make('slash1', 1.45, 4.5);
+  MOVES.backhand = make('slash2', 1.4, 5.0);
+}
+
 export class SwordPlay {
   constructor(player) {
     this.p = player;
@@ -163,7 +182,8 @@ export class SwordPlay {
     // pose -> rig
     const pose = def.pose(t, M.dir);
     const a = P.h.a;
-    a.swordOverride = pose;
+    if (def.mocap) { a.swingMocap = { clip: def.mocap, u: t }; a.swordOverride = null; }
+    else { a.swingMocap = null; a.swordOverride = pose; }
     a.flip = pose.flip || 0;
     a.tuck = pose.tuck || 0;
     a.twirl = pose.twirl || 0;
@@ -188,7 +208,7 @@ export class SwordPlay {
     const a = this.p.h.a;
     const wasCombo = COMBO.includes(this.move.name);
     this.move = null;
-    a.swordOverride = null; a.flip = 0; a.tuck = 0; a.twirl = 0; a.moveCrouch = 0;
+    a.swordOverride = null; a.swingMocap = null; a.flip = 0; a.tuck = 0; a.twirl = 0; a.moveCrouch = 0;
     this.p.spinYaw = 0;
     if (this.queued && wasCombo) { this.queued = false; this.start(COMBO[this.step]); return; }
     this.comboTimer = 0.45;

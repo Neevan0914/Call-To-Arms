@@ -421,6 +421,7 @@ export const ChapterFour = {
         if (point && dir) g.effects.blood(point, dir);
         A.impact('flesh', point || Vk.position);
         Vk.h.a.hurt = 1;
+        if (!(Vk.h.a.hitT > 0 && Vk.h.a.hitT < 0.35)) Vk.h.a.hitT = 0;
         if (amount > 110 && Math.random() < 0.4) { D.state = 'stagger'; D.t = 0; } // only big hits rock him
         if (Math.random() < 0.5) A.grunt(Vk.position.clone().setY(Vk.position.y + 1.5), 0.8);
       }
